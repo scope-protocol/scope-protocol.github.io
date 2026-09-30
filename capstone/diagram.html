@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCOPE Requirements</title>
+<meta name="description" content="SCOPE capstone Deliverable 2: atomic requirements, on-chain requirements matrix and architecture diagrams.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+<style>
+:root { --ink:#1f2933; --muted:#52606d; --rule:#d9e0e6; --paper:#f6f7f9; --plate:#fff; --accent:#be123c; color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font:400 16px/1.6 "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; padding-inline:clamp(16px,4vw,48px); padding-block:0 72px; }
+main { max-width:1080px; margin:0 auto; }
+header { padding-block:48px 24px; border-bottom:2px solid var(--ink); display:grid; gap:10px; }
+.kicker { font:600 12px/1 "IBM Plex Mono", Menlo, monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+h1 { font:700 clamp(28px,4vw,40px)/1.1 "IBM Plex Sans", Arial, sans-serif; margin:0; letter-spacing:-.01em; text-wrap:balance; }
+.sub { color:var(--muted); margin:0; }
+nav.toc { margin:24px 0 8px; display:flex; flex-wrap:wrap; gap:6px 18px; font-size:14px; }
+nav.toc a { color:var(--muted); text-decoration:none; } nav.toc a:hover { color:var(--ink); text-decoration:underline; }
+h2 { font:700 24px/1.25 "IBM Plex Sans", Arial, sans-serif; margin:56px 0 12px; padding-top:12px; border-top:1px solid var(--rule); scroll-margin-top:16px; }
+h3 { font:600 17px/1.3 "IBM Plex Sans", Arial, sans-serif; margin:28px 0 8px; }
+p { margin:0 0 12px; max-width:72ch; }
+ul { margin:0 0 12px; padding-left:1.3em; max-width:80ch; } li { margin-bottom:4px; }
+.tw { overflow-x:auto; margin:8px 0 16px; border:1px solid var(--rule); border-radius:8px; background:var(--plate); }
+table { border-collapse:collapse; width:100%; font-size:13.5px; line-height:1.45; }
+th, td { text-align:left; vertical-align:top; padding:8px 12px; border-bottom:1px solid var(--rule); }
+th { font:600 11px "IBM Plex Mono", Menlo, monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:#fafbfc; white-space:nowrap; }
+tr:last-child td { border-bottom:0; }
+td:first-child { font-weight:600; white-space:nowrap; }
+td { overflow-wrap:anywhere; } td:first-child { overflow-wrap:normal; }
+td:nth-child(2) { min-width:230px; }
+td code, .mono { font-family:"IBM Plex Mono", Menlo, monospace; font-size:12.5px; }
+.req { display:inline-block; background:var(--ink); color:#fff; font:600 11.5px "IBM Plex Mono", Menlo, monospace; padding:2px 6px; border-radius:4px; }
+figure { margin:20px 0 28px; background:var(--plate); border:1px solid var(--rule); border-radius:10px; overflow:hidden; }
+figure .svgwrap { overflow-x:auto; padding:16px; }
+figure svg { display:block; width:100%; height:auto; min-width:720px; }
+figure.tall svg { max-width:760px; margin-inline:auto; min-width:560px; }
+figcaption { border-top:1px solid var(--rule); padding:12px 16px; font-size:14px; color:var(--muted); }
+figcaption b { color:var(--ink); }
+.slot { border:2px dashed #b45309; background:#fff8ec; border-radius:10px; padding:16px 18px; margin:8px 0 16px; }
+.slot b { display:block; color:#b45309; font:600 12px "IBM Plex Mono", Menlo, monospace; letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; }
+.slot p { margin:0; color:var(--ink); }
+footer { margin-top:64px; padding-top:16px; border-top:1px solid var(--rule); font-size:13px; color:var(--muted); display:grid; gap:4px; }
+a { color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="kicker">Capstone Deliverable 2 · Architecture Diagram &amp; Requirements</span>
+  <h1>SCOPE: Architecture Diagram &amp; Requirements</h1>
+  <p class="sub">Turbin3 Capstone, Deliverable 2 · Abhineet and Valentyn · October 2026</p>
+</header>
+<nav class="toc" aria-label="Sections"><a href="#s1">1. Project</a><a href="#s2">2. Actors</a><a href="#s3">3. MVP use cases</a><a href="#s4">4. Granularity self-check</a><a href="#s5">5. Adversarial analysis (AI red team)</a><a href="#s6">6. Atomic requirements and traceability</a><a href="#s7">7. On-chain requirements matrix</a><a href="#s8">8. On-chain vs client-side</a><a href="#s9">9. Diagrams</a><a href="#s10">10. External dependencies</a><a href="#s11">11. Scope and milestones</a><a href="#s12">12. Final checklist</a></nav>
+<h2 id="s1">1. Project</h2>
+<p>SCOPE is a confidential payout rail on Solana. A visible payer pays many recipients with encrypted amounts, and a recipient who wants it gets a fresh one-time account per payment that the public cannot tie to them. Funds stay ordinary Token-2022 tokens in Token-2022 accounts: no pool, no relayer, no custody. Launch use: payroll and supplier payouts, where the payer is public anyway.</p>
+<p>The on-chain part is one Pinocchio program with two instruction handlers, announce and reclaim. Moving tokens is done by Token-2022 instructions the clients compose; the program is never in the funds path. The off-chain part is one Rust CLI, scope, for the payer and the recipient.</p>
+<p>Program id EwbfwDdaRdxzF6wJFBKQmqcGoh93wNFL7FMo31eK9V2H. Source: github.com/scope-protocol/scope.</p>
+<h2 id="s2">2. Actors</h2>
+<p>Carried forward from the LOI and updated for the current design: the meta-address registry moved to the roadmap, so the recipient wallet no longer signs any POC instruction of ours.</p>
+<div class="tw"><table><thead><tr><th scope="col">Category</th><th scope="col">Actor</th><th scope="col">Signs</th><th scope="col">Role in the POC</th></tr></thead><tbody><tr><td>Direct actor</td><td>Payer</td><td>announce; the whole setup transaction</td><td>creates, configures and hands over each one-time account, announces it, funds it</td></tr><tr><td>Direct actor</td><td>Any caller</td><td>nothing our program checks</td><td>submits reclaim; the refund can only reach the stored payer</td></tr><tr><td>Direct actor</td><td>Recipient's one-time key P</td><td>the sweep transaction (Token-2022 only)</td><td>moves the payment out and pays the sweep fee</td></tr><tr><td>Direct actor</td><td>Destination owner D_owner</td><td>setup of D inside the sweep</td><td>owns the fresh account the payment lands in</td></tr><tr><td>Beneficiary</td><td>Recipient</td><td>none of our instructions</td><td>receives the payment</td></tr><tr><td>Beneficiary</td><td>Payer (rent)</td><td>none for the refund</td><td>gets both rents back at reclaim</td></tr><tr><td>Beneficiary</td><td>Auditor</td><td>none</td><td>reads one amount from a disclosed receipt</td></tr><tr><td>Administrator</td><td>Program upgrade authority</td><td>upgrades</td><td>Squads multisig on devnet; revoked before mainnet</td></tr><tr><td>Administrator</td><td>Mint authority</td><td>mint settings</td><td>approval policy, freeze, optional auditor key; outside SCOPE</td></tr><tr><td>Stakeholder</td><td>Payout platforms, issuers, sRFC-42 contributors, regulators</td><td>none</td><td>adopt, approve, standardise or object</td></tr></tbody></table></div>
+<h2 id="s3">3. MVP use cases</h2>
+<p>Rule: 1 use case = 1 atomic state transition = 1 instruction handler. SCOPE is written in Pinocchio, so the handler is a Pinocchio instruction, not an Anchor one; the mapping is the same.</p>
+<div class="slot"><b>To be written: Use cases, written by the team</b><p>UC1 announce and UC2 reclaim: one atomic statement each, the handler, and the signer. Written by us before any AI pass.</p></div>
+<h2 id="s4">4. Granularity self-check</h2>
+<div class="slot"><b>To be written: Self-check, written by the team</b><p>The result of each rule for UC1 and UC2: 1 Atomicity, 2 State ownership, 3 Real signers, 4 On-chain vs client-side. Written by us before any AI pass.</p></div>
+<h2 id="s5">5. Adversarial analysis (AI red team)</h2>
+<div class="slot"><b>To be written: Red-team record</b><p>Run after sections 3 and 4 are written. Each finding: what the AI flagged, whether we agree, and what changed. Findings we rejected stay in the table with the reason.</p></div>
+<h2 id="s6">6. Atomic requirements and traceability</h2>
+<p>Every requirement is one checkable action. REQ labels appear on the diagrams in section 9 next to the arrow, decision or process that carries it out, and every requirement has its own test in the repository.</p>
+<div class="tw"><table><thead><tr><th scope="col">REQ</th><th scope="col">Atomic statement</th><th scope="col">Handler</th><th scope="col">Signer</th><th scope="col">Failure or effect</th><th scope="col">Diagram label</th><th scope="col">Test</th></tr></thead><tbody><tr><td><span class="req">REQ01</span></td><td>The program shall write a 68-byte announcement (discriminator, version, view tag, bump, R, payer) for a one-time token account the payer set up.</td><td>announce</td><td>Payer</td><td>account created and written</td><td>Overview arrows 1 and 3; announce: Write record</td><td>announce_writes_the_record</td></tr><tr><td><span class="req">REQ02</span></td><td>The program shall reject announce data that is not exactly 33 bytes after the tag (R 32, view tag 1).</td><td>announce</td><td>Payer</td><td>InvalidInstructionData (1)</td><td>announce: first decision</td><td>rejects_short_and_long_data</td></tr><tr><td><span class="req">REQ03</span></td><td>The program shall reject announce unless the payer signed.</td><td>announce</td><td>Payer</td><td>PayerNotSigner (2)</td><td>announce: Payer signed?</td><td>rejects_payer_that_did_not_sign</td></tr><tr><td><span class="req">REQ04</span></td><td>The program shall reject announce unless the fourth account is the System program.</td><td>announce</td><td>Payer</td><td>WrongSystemProgram (3)</td><td>announce: System program?</td><td>rejects_wrong_system_program</td></tr><tr><td><span class="req">REQ05</span></td><td>The program shall reject a token account whose address is not create_with_seed(payer, hex(sha256("stealth-ta/v1" ‖ R))[..32], Token-2022).</td><td>announce</td><td>Payer</td><td>TokenAccountAddressMismatch (5)</td><td>announce: create_with_seed?; Overview arrow 4</td><td>rejects_stranger_announcing_the_payers_account, announce_rejects_wrong_ephemeral</td></tr><tr><td><span class="req">REQ06</span></td><td>The program shall reject a token account that is not owned by Token-2022 or is not initialized.</td><td>announce</td><td>Payer</td><td>NotTokenAccount (6), TokenAccountNotInitialized (7)</td><td>announce: owned and initialized?</td><td>rejects_token_account_not_owned_by_token_2022, rejects_uninitialized_token_account</td></tr><tr><td><span class="req">REQ07</span></td><td>The program shall reject a token account whose close authority is not the announcement PDA.</td><td>announce</td><td>Payer</td><td>CloseAuthorityMismatch (8)</td><td>announce: close authority?</td><td>announce_rejects_other_close_authority</td></tr><tr><td><span class="req">REQ08</span></td><td>The program shall reject a token account whose authority is still the payer.</td><td>announce</td><td>Payer</td><td>OwnerNotHandedOver (9)</td><td>announce: handed over?</td><td>announce_rejects_owner_still_payer</td></tr><tr><td><span class="req">REQ09</span></td><td>The program shall reject a token account with a delegate set.</td><td>announce</td><td>Payer</td><td>DelegateSet (10)</td><td>announce: no delegate?</td><td>rejects_delegate</td></tr><tr><td><span class="req">REQ10</span></td><td>The program shall reject a token account without the confidential transfer extension or with a pending-credit cap other than 1.</td><td>announce</td><td>Payer</td><td>MissingConfidentialExtension (11), CreditCapNotOne (12)</td><td>announce: extension, cap 1?</td><td>rejects_missing_confidential_extension, rejects_credit_cap_above_one</td></tr><tr><td><span class="req">REQ11</span></td><td>The program shall reject a token account that allows non-confidential credits.</td><td>announce</td><td>Payer</td><td>PublicCreditsEnabled (13)</td><td>announce: public credits disabled?</td><td>announce_rejects_public_credits_enabled</td></tr><tr><td><span class="req">REQ12</span></td><td>The program shall reject an announcement account that is not the canonical PDA ["ann", token_account], or that has data or a non-System owner.</td><td>announce</td><td>Payer</td><td>AnnouncementAddressMismatch (14), AnnouncementInUse (15)</td><td>announce: canonical, empty?</td><td>rejects_non_canonical_announcement_address, rejects_announcement_with_data, announce_twice_fails</td></tr><tr><td><span class="req">REQ13</span></td><td>The program shall fund any rent-exemption shortfall of the announcement from the payer, then allocate and assign it by System CPIs signed by the PDA.</td><td>announce</td><td>Payer</td><td>a pre-funded address still works</td><td>Overview arrow 2; announce: CPI boxes</td><td>announce_succeeds_when_announcement_prefunded</td></tr><tr><td><span class="req">REQ14</span></td><td>The program shall let any caller reclaim an announced one-time account once it is empty.</td><td>reclaim</td><td>none</td><td>both accounts closed</td><td>Overview arrow 5</td><td>reclaim_returns_both_rents_to_payer</td></tr><tr><td><span class="req">REQ15</span></td><td>The program shall reject reclaim with any data after the tag.</td><td>reclaim</td><td>none</td><td>InvalidInstructionData (1)</td><td>reclaim: first decision</td><td>rejects_data_after_the_discriminator</td></tr><tr><td><span class="req">REQ16</span></td><td>The program shall reject reclaim unless the fourth account is Token-2022.</td><td>reclaim</td><td>none</td><td>WrongTokenProgram (4)</td><td>reclaim: Token-2022?</td><td>rejects_wrong_token_program</td></tr><tr><td><span class="req">REQ17</span></td><td>The program shall reject an announcement not owned by the program, not 68 bytes, or with a wrong discriminator or version.</td><td>reclaim</td><td>none</td><td>NotAnnouncement (16)</td><td>reclaim: owned, 68 B?</td><td>rejects_program_owned_account_that_is_not_an_announcement, reclaim_rejects_non_announcement</td></tr><tr><td><span class="req">REQ18</span></td><td>The program shall reject reclaim unless the announcement address equals PDA("ann", token account, stored bump).</td><td>reclaim</td><td>none</td><td>AnnouncementAddressMismatch (14)</td><td>reclaim: PDA with stored bump?</td><td>reclaim_rejects_decoy_token_account</td></tr><tr><td><span class="req">REQ19</span></td><td>The program shall reject reclaim unless the payer account equals the payer stored in the announcement.</td><td>reclaim</td><td>none</td><td>PayerMismatch (17)</td><td>reclaim: stored payer?</td><td>reclaim_rejects_wrong_payer</td></tr><tr><td><span class="req">REQ20</span></td><td>The program shall close the token account by a Token-2022 CloseAccount CPI signed by the announcement PDA, with the payer as destination; Token-2022 refuses while any balance is nonzero.</td><td>reclaim</td><td>none</td><td>Token-2022 error, announcement stays</td><td>Overview arrow 6; reclaim: CPI and Token-2022 decision</td><td>reclaim_fails_while_balance_remains, refuses_while_confidential_balance_is_pending</td></tr><tr><td><span class="req">REQ21</span></td><td>The program shall move the announcement's lamports to the payer and close the announcement.</td><td>reclaim</td><td>none</td><td>second reclaim fails</td><td>Overview arrow 7; reclaim: move lamports</td><td>reclaim_returns_both_rents_to_payer, second_reclaim_fails</td></tr></tbody></table></div>
+<h2 id="s7">7. On-chain requirements matrix</h2>
+<h3>Accounts</h3>
+<div class="tw"><table><thead><tr><th scope="col">Account</th><th scope="col">Type</th><th scope="col">Owner program</th><th scope="col">Authority</th><th scope="col">Address or seeds</th><th scope="col">Data</th><th scope="col">Created / closed by</th></tr></thead><tbody><tr><td>Announcement</td><td>PDA</td><td>SCOPE</td><td>program (PDA signs)</td><td>["ann", token_account], canonical bump stored at byte 3</td><td>68 B: disc 1, version 1, view_tag, bump, R (32), payer (32)</td><td>announce / reclaim</td></tr><tr><td>One-time token account</td><td>Token-2022 account</td><td>Token-2022</td><td>payer during setup, then P; close authority: Announcement</td><td>create_with_seed(payer, hex(sha256("stealth-ta/v1" ‖ R))[..32], Token-2022)</td><td>token account + confidential extension, 465 B for a mint with no account extensions</td><td>payer's setup tx / reclaim CPI</td></tr><tr><td>P</td><td>System account</td><td>System</td><td>recipient's one-time key</td><td>P = B_spend + t·G</td><td>none</td><td>funded in the payer tx / drained in the sweep</td></tr><tr><td>Payer source</td><td>Token-2022 account</td><td>Token-2022</td><td>payer</td><td>any</td><td>confidential balance</td><td>outside SCOPE</td></tr><tr><td>Destination D</td><td>Token-2022 account</td><td>Token-2022</td><td>D_owner</td><td>create_with_seed(D_owner, …)</td><td>confidential balance</td><td>inside the sweep</td></tr><tr><td>Mint</td><td>Token-2022 mint</td><td>Token-2022</td><td>mint authority</td><td>given</td><td>confidential transfer mint extension, auto-approve</td><td>outside SCOPE</td></tr></tbody></table></div>
+<h3>Instruction handlers</h3>
+<div class="tw"><table><thead><tr><th scope="col">Handler</th><th scope="col">Tag</th><th scope="col">Accounts, in order</th><th scope="col">Data</th><th scope="col">Signer</th></tr></thead><tbody><tr><td>announce</td><td>0</td><td>payer (signer, writable), token account, announcement (writable), System program</td><td>R (32), view_tag (1)</td><td>payer</td></tr><tr><td>reclaim</td><td>1</td><td>announcement (writable), token account (writable), payer (writable), Token-2022 program</td><td>none</td><td>none</td></tr></tbody></table></div>
+<h3>CPI dependencies</h3>
+<div class="tw"><table><thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Instruction</th><th scope="col">Signed by</th><th scope="col">REQ</th></tr></thead><tbody><tr><td>announce</td><td>System</td><td>Transfer payer → announcement (only the shortfall)</td><td>payer</td><td><span class="req">REQ13</span></td></tr><tr><td>announce</td><td>System</td><td>Allocate 68 B, Assign to SCOPE</td><td>announcement PDA</td><td><span class="req">REQ13</span></td></tr><tr><td>reclaim</td><td>Token-2022</td><td>CloseAccount, destination payer</td><td>announcement PDA (close authority)</td><td><span class="req">REQ20</span></td></tr></tbody></table></div>
+<h3>Custom program constraints</h3>
+<ul><li>An announced token account takes at most one confidential credit and no public credits (REQ10, REQ11).</li><li>Only the payer can create the token account address, and announce checks the address binds payer and R (REQ05).</li><li>The close authority of every announced account is its announcement PDA, so rent can only return to the stored payer (REQ07, REQ19, REQ20).</li><li>The program holds no authority that can move tokens; CloseAccount works only at zero balance (REQ20).</li><li>Error codes are Custom(n), append-only, 0 to 17. Compute: announce 6,373 CU at bump 255, reclaim 3,256 CU, with CI ceilings 7,700 and 4,000.</li></ul>
+<h2 id="s8">8. On-chain vs client-side</h2>
+<p>Protocol logic on chain is only what the two handlers check and write, plus Token-2022's own transfer rules. Everything else runs in the scope CLI and is labelled CL, not REQ, because no program of ours enforces it.</p>
+<div class="tw"><table><thead><tr><th scope="col">ID</th><th scope="col">Client responsibility</th><th scope="col">Where</th></tr></thead><tbody><tr><td>CL01</td><td>Derive R, the shared secret, P, the view tag and the account keys</td><td>stealth-keygen, payer and recipient</td></tr><tr><td>CL02</td><td>Build the payer's setup transaction: CreateAccountWithSeed, InitializeAccount3, ConfigureAccount with its proof, DisableNonConfidentialCredits, SetAuthority x2, announce, fund P, Transfer with three proofs</td><td>payer CLI</td></tr><tr><td>CL03</td><td>Journal every attempt before sending; resume after a crash without paying twice</td><td>payer CLI, local jsonl</td></tr><tr><td>CL04</td><td>Scan announcements by view tag through RPC getProgramAccounts</td><td>recipient CLI</td></tr><tr><td>CL05</td><td>Build the sweep: create D, ApplyPendingBalance, Transfer to D, EmptyAccount, burn dust, reclaim, drain P</td><td>recipient CLI</td></tr><tr><td>CL06</td><td>Refuse a sweep destination seen before (fresh-destination policy)</td><td>recipient CLI</td></tr><tr><td>CL07</td><td>Disclose a receipt {R, ct_ikm, tx signature}; verify it against the payment transaction</td><td>either party, auditor</td></tr></tbody></table></div>
+<h2 id="s9">9. Diagrams</h2>
+<p>Structure mirrors the reference: one overview, one flow per instruction with every decision and error path, an account map, and an end-to-end view with external actors. Numbers on arrows give the order; REQ labels point back to section 6.</p>
+<figure class=""><div class="svgwrap"><svg viewBox="0 0 1240 170" role="img" aria-label="Legend"><defs>
+<marker id="legend-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+<marker id="legend-cpi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#be123c"/></marker>
+<marker id="legend-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+<marker id="legend-funds" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+<marker id="legend-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="legend-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="legend-admin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="legend-offchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+</defs>
+<rect width="1240" height="170" fill="#ffffff"/>
+<rect x="20" y="20" width="190" height="44" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<rect x="223" y="20" width="190" height="44" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="426" y="20" width="190" height="44" rx="8" fill="#f1ebfe" stroke="#6d28d9" stroke-width="2"/>
+<rect x="430" y="24" width="182" height="36" rx="5" fill="none" stroke="#6d28d9" stroke-width="1"/>
+<rect x="629" y="20" width="190" height="44" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="832" y="20" width="190" height="44" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<rect x="1035" y="20" width="190" height="44" rx="8" fill="#fff4e0" stroke="#b45309" stroke-width="1.5"/>
+<rect x="20" y="92" width="170" height="44" rx="8" fill="#fff4de" stroke="#1f2933" stroke-width="2.5"/>
+<rect x="223" y="92" width="170" height="44" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5" stroke-dasharray="6 4"/>
+<rect x="426" y="92" width="170" height="44" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 4"/>
+<path d="M770.2,116.0 A17.5,17.5 0 0 1 757.6,127.3 A17.5,17.5 0 0 1 724.5,134.3 A17.5,17.5 0 0 1 683.5,134.3 A17.5,17.5 0 0 1 650.4,127.3 A17.5,17.5 0 0 1 637.8,116.0 A17.5,17.5 0 0 1 650.4,104.7 A17.5,17.5 0 0 1 683.5,97.7 A17.5,17.5 0 0 1 724.5,97.7 A17.5,17.5 0 0 1 757.6,104.7 A17.5,17.5 0 0 1 770.2,116.0 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/>
+<path d="M812,97 V135 A60.0,9 0 0 0 932,135 V97 A60.0,9 0 0 0 812,97 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/><path d="M812,97 A60.0,9 0 0 0 932,97" fill="none" stroke="#64748b" stroke-width="1.5"/>
+<path d="M960,102 L1010,102" fill="none" stroke="#be123c" stroke-width="2" marker-end="url(#legend-cpi)"/>
+<path d="M960,124 L1010,124" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#legend-read)"/>
+<path d="M1100,102 L1150,102" fill="none" stroke="#b45309" stroke-width="3" marker-end="url(#legend-funds)"/>
+<path d="M1100,124 L1150,124" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="7 4" marker-end="url(#legend-rent)"/>
+<rect x="30" y="83" width="50" height="18" rx="9" fill="#1f2933"/><text x="54.8" y="96" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">SIGNER</text>
+<rect x="233" y="83" width="79" height="18" rx="9" fill="#1f2933"/><text x="272.6" y="96" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">BENEFICIARY</text>
+<rect x="960.0" y="145" width="48" height="19" rx="4" fill="#1f2933"/><text x="984.0" y="158.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ05</text>
+<text x="115.0" y="46.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">SCOPE program (ours)</text>
+<text x="318.0" y="46.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Solana program, unchanged</text>
+<text x="521.0" y="46.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">PDA, owned by SCOPE</text>
+<text x="724.0" y="46.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Token-2022 account</text>
+<text x="927.0" y="46.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">System account, no data</text>
+<text x="1130.0" y="46.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Off-chain client (ours)</text>
+<text x="105.0" y="118.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Signer</text>
+<text x="308.0" y="118.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Beneficiary</text>
+<text x="511.0" y="118.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Roadmap, not in POC</text>
+<text x="704.0" y="120.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">External service</text>
+<text x="872.0" y="124.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Local store</text>
+<text x="1018.0" y="106.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">CPI</text>
+<text x="1018.0" y="128.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">read / off chain</text>
+<text x="1158.0" y="106.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">tokens</text>
+<text x="1158.0" y="128.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">rent (SOL)</text>
+<text x="1020.0" y="158.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">requirement carried out here</text>
+</svg></div><figcaption><b>Legend.</b> Signers have a solid heavy border; beneficiaries a dashed one. PDAs have a double border. External services are clouds; local stores are cylinders.</figcaption></figure>
+<figure class=""><div class="svgwrap"><svg viewBox="0 0 1240 680" role="img" aria-label="Overview: programs, instructions and accounts"><defs>
+<marker id="overview-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+<marker id="overview-cpi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#be123c"/></marker>
+<marker id="overview-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+<marker id="overview-funds" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+<marker id="overview-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="overview-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="overview-admin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="overview-offchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+</defs>
+<rect width="1240" height="680" fill="#ffffff"/>
+<rect x="20" y="90" width="200" height="90" rx="8" fill="#fff4de" stroke="#1f2933" stroke-width="2.5"/>
+<rect x="20" y="470" width="200" height="80" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="330" y="180" width="320" height="280" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<rect x="350" y="276" width="280" height="60" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="350" y="366" width="280" height="60" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="930" y="30" width="290" height="70" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="930" y="140" width="290" height="160" rx="8" fill="#f1ebfe" stroke="#6d28d9" stroke-width="2"/>
+<rect x="934" y="144" width="282" height="152" rx="5" fill="none" stroke="#6d28d9" stroke-width="1"/>
+<rect x="930" y="330" width="290" height="150" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="930" y="520" width="290" height="64" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<path d="M220,130 L285,130 L285,306 L342,306" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#overview-flow)"/>
+<path d="M220,510 L285,510 L285,396 L342,396" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#overview-flow)"/>
+<path d="M650,250 L740,250 L740,65 L922,65" fill="none" stroke="#be123c" stroke-width="2" marker-end="url(#overview-cpi)"/>
+<path d="M650,290 L922,290" fill="none" stroke="#be123c" stroke-width="2" marker-end="url(#overview-cpi)"/>
+<path d="M650,350 L922,350" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#overview-read)"/>
+<path d="M650,420 L740,420 L740,552 L922,552" fill="none" stroke="#be123c" stroke-width="2" marker-end="url(#overview-cpi)"/>
+<path d="M1075,520 L1075,488" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#overview-flow)"/>
+<path d="M490,460 L490,640 L8,640 L8,150 L14,150" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="7 4" marker-end="url(#overview-rent)"/>
+<rect x="30" y="81" width="132" height="18" rx="9" fill="#1f2933"/><text x="96.2" y="94" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">SIGNER · BENEFICIARY</text>
+<rect x="30" y="461" width="85" height="18" rx="9" fill="#1f2933"/><text x="72.5" y="474" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">DIRECT ACTOR</text>
+<rect x="940" y="131" width="32" height="18" rx="9" fill="#1f2933"/><text x="955.9" y="144" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">PDA</text>
+<rect x="940" y="321" width="121" height="18" rx="9" fill="#1f2933"/><text x="1000.3" y="334" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">TOKEN-2022 ACCOUNT</text>
+<rect x="228.0" y="137" width="48" height="19" rx="4" fill="#1f2933"/><text x="252.0" y="150.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ01</text>
+<rect x="228.0" y="579" width="48" height="19" rx="4" fill="#1f2933"/><text x="252.0" y="592.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ14</text>
+<rect x="750.0" y="171" width="48" height="19" rx="4" fill="#1f2933"/><text x="774.0" y="184.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ13</text>
+<rect x="700.0" y="299" width="48" height="19" rx="4" fill="#1f2933"/><text x="724.0" y="312.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ01</text>
+<rect x="760.0" y="359" width="91" height="19" rx="4" fill="#1f2933"/><text x="805.6" y="372.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ05–REQ11</text>
+<rect x="750.0" y="511" width="48" height="19" rx="4" fill="#1f2933"/><text x="774.0" y="524.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ20</text>
+<rect x="520.0" y="619" width="48" height="19" rx="4" fill="#1f2933"/><text x="544.0" y="632.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ21</text>
+<text x="34.0" y="122.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Payer</text>
+<text x="34.0" y="139.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">signs announce</text>
+<text x="34.0" y="156.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">receives every rent refund</text>
+<text x="34.0" y="497.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Any caller</text>
+<text x="34.0" y="514.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">submits reclaim;</text>
+<text x="34.0" y="531.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">no signature checked</text>
+<text x="344.0" y="324.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933"></text>
+<text x="350.0" y="208.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">SCOPE program</text>
+<text x="350.0" y="228.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Pinocchio 0.11, no_std</text>
+<text x="350.0" y="246.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">EwbfwDdaRdxzF6wJ…MPo31eK9V2H</text>
+<text x="364.0" y="302.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">announce   (tag 0)</text>
+<text x="364.0" y="319.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">verify the payer's setup, publish it</text>
+<text x="364.0" y="392.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">reclaim   (tag 1)</text>
+<text x="364.0" y="409.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">close the emptied account, refund rent</text>
+<text x="944.0" y="61.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">System program</text>
+<text x="944.0" y="78.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Transfer, Allocate, Assign</text>
+<text x="944.0" y="190.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Announcement</text>
+<text x="944.0" y="207.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">seeds [&quot;ann&quot;, token_account]</text>
+<text x="944.0" y="224.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">owner: SCOPE program</text>
+<text x="944.0" y="241.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">68 B: disc, version, view_tag,</text>
+<text x="944.0" y="258.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">bump, R (32), payer (32)</text>
+<text x="944.0" y="375.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">One-time token account</text>
+<text x="944.0" y="392.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Token-2022 account, not a PDA</text>
+<text x="944.0" y="409.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority: P (recipient's key)</text>
+<text x="944.0" y="426.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">close authority: Announcement</text>
+<text x="944.0" y="443.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">1 credit max, public credits off</text>
+<text x="944.0" y="548.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Token-2022 program</text>
+<text x="944.0" y="565.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">CloseAccount, confidential transfers</text>
+<text x="228.0" y="120.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">1 · announce(R, view_tag)</text>
+<text x="228.0" y="568.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">5 · reclaim()</text>
+<text x="750.0" y="140.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">2 · CPI to System:</text>
+<text x="750.0" y="155.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">Transfer, Allocate, Assign</text>
+<text x="700.0" y="282.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">3 · writes the 68-byte record</text>
+<text x="760.0" y="342.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">4 · reads and checks the setup</text>
+<text x="750.0" y="480.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">6 · CPI CloseAccount,</text>
+<text x="750.0" y="495.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">signed by the PDA</text>
+<text x="1085.0" y="510.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">closes</text>
+<text x="250.0" y="632.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">7 · rent refund to the stored payer</text>
+</svg></div><figcaption><b>Overview.</b> Seven numbered arrows, each one instruction or CPI: 1 announce, 2 and 3 its System CPIs and record, 4 the setup checks, 5 reclaim, 6 its Token-2022 CPI, 7 the rent refund.</figcaption></figure>
+<figure class="tall"><div class="svgwrap"><svg viewBox="0 0 1000 1676" role="img" aria-label="Flow: announce"><defs>
+<marker id="announce-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+<marker id="announce-cpi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#be123c"/></marker>
+<marker id="announce-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+<marker id="announce-funds" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+<marker id="announce-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="announce-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="announce-admin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="announce-offchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+</defs>
+<rect width="1000" height="1676" fill="#ffffff"/>
+<rect x="140" y="20" width="380" height="56" rx="8" fill="#fff4de" stroke="#1f2933" stroke-width="2.5"/>
+<polygon points="330.0,106.0 500.0,149.0 330.0,192.0 160.0,149.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="123.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,218.0 500.0,261.0 330.0,304.0 160.0,261.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="235.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,330.0 500.0,373.0 330.0,416.0 160.0,373.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="347.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,442.0 500.0,485.0 330.0,528.0 160.0,485.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="459.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,554.0 500.0,597.0 330.0,640.0 160.0,597.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="563.0" width="350" height="68" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,666.0 500.0,709.0 330.0,752.0 160.0,709.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="683.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,778.0 500.0,821.0 330.0,864.0 160.0,821.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="795.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,890.0 500.0,933.0 330.0,976.0 160.0,933.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="907.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,1002.0 500.0,1045.0 330.0,1088.0 160.0,1045.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="1011.0" width="350" height="68" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,1114.0 500.0,1157.0 330.0,1200.0 160.0,1157.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="1131.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,1226.0 500.0,1269.0 330.0,1312.0 160.0,1269.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="1235.0" width="350" height="68" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<rect x="140" y="1342.0" width="380" height="56" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<rect x="140" y="1428.0" width="380" height="56" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<rect x="140" y="1514.0" width="380" height="56" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="140" y="1600.0" width="380" height="56" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.5"/>
+<rect x="620" y="20" width="350" height="90" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+<path d="M330,76 L330,100.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,149.0 L612,149.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,192.0 L330,212.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,261.0 L612,261.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,304.0 L330,324.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,373.0 L612,373.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,416.0 L330,436.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,485.0 L612,485.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,528.0 L330,548.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,597.0 L612,597.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,640.0 L330,660.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,709.0 L612,709.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,752.0 L330,772.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,821.0 L612,821.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,864.0 L330,884.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,933.0 L612,933.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,976.0 L330,996.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,1045.0 L612,1045.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,1088.0 L330,1108.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,1157.0 L612,1157.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,1200.0 L330,1220.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M500.0,1269.0 L612,1269.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#announce-no)"/>
+<path d="M330,1312.0 L330,1336.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M330,1398.0 L330,1422.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M330,1484.0 L330,1508.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<path d="M330,1570.0 L330,1594.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#announce-flow)"/>
+<rect x="150" y="11" width="50" height="18" rx="9" fill="#1f2933"/><text x="174.8" y="24" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">SIGNER</text>
+<rect x="90.0" y="141.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="154.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ02</text>
+<rect x="90.0" y="253.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="266.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ03</text>
+<rect x="90.0" y="365.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="378.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ04</text>
+<rect x="90.0" y="477.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="490.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ05</text>
+<rect x="90.0" y="589.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="602.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ06</text>
+<rect x="90.0" y="701.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="714.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ07</text>
+<rect x="90.0" y="813.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="826.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ08</text>
+<rect x="90.0" y="925.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="938.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ09</text>
+<rect x="90.0" y="1037.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="1050.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ10</text>
+<rect x="90.0" y="1149.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="1162.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ11</text>
+<rect x="90.0" y="1261.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="1274.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ12</text>
+<rect x="80.0" y="1362.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="104.0" y="1375.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ13</text>
+<rect x="80.0" y="1448.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="104.0" y="1461.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ13</text>
+<rect x="80.0" y="1534.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="104.0" y="1547.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ01</text>
+<text x="330.0" y="44.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Payer submits announce(R, view_tag)</text>
+<text x="330.0" y="61.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">inside the payer's one setup transaction</text>
+<text x="330.0" y="145.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Data after the tag</text>
+<text x="330.0" y="162.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">exactly 33 bytes?</text>
+<text x="512.0" y="141.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="153.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">InvalidInstructionData (1)</text>
+<text x="340.0" y="208.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="265.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Payer signed?</text>
+<text x="512.0" y="253.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="265.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">PayerNotSigner (2)</text>
+<text x="340.0" y="320.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="369.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">4th account is the</text>
+<text x="330.0" y="386.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">System program?</text>
+<text x="512.0" y="365.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="377.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">WrongSystemProgram (3)</text>
+<text x="340.0" y="432.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="481.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Token account =</text>
+<text x="330.0" y="498.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">create_with_seed(payer, R)?</text>
+<text x="512.0" y="477.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="489.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">TokenAccountAddressMismatch (5)</text>
+<text x="340.0" y="544.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="593.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Owned by Token-2022</text>
+<text x="330.0" y="610.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">and initialized?</text>
+<text x="512.0" y="589.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="593.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">NotTokenAccount (6)</text>
+<text x="634.0" y="610.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">TokenAccountNotInitialized (7)</text>
+<text x="340.0" y="656.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="705.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Close authority =</text>
+<text x="330.0" y="722.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Announcement PDA?</text>
+<text x="512.0" y="701.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="713.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">CloseAuthorityMismatch (8)</text>
+<text x="340.0" y="768.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="817.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Authority handed over</text>
+<text x="330.0" y="834.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">(not the payer)?</text>
+<text x="512.0" y="813.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="825.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">OwnerNotHandedOver (9)</text>
+<text x="340.0" y="880.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="937.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">No delegate set?</text>
+<text x="512.0" y="925.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="937.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">DelegateSet (10)</text>
+<text x="340.0" y="992.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="1041.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Confidential extension</text>
+<text x="330.0" y="1058.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">with credit cap 1?</text>
+<text x="512.0" y="1037.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="1041.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">MissingConfidentialExtension (11)</text>
+<text x="634.0" y="1058.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">CreditCapNotOne (12)</text>
+<text x="340.0" y="1104.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="1153.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Public credits</text>
+<text x="330.0" y="1170.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">disabled?</text>
+<text x="512.0" y="1149.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="1161.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">PublicCreditsEnabled (13)</text>
+<text x="340.0" y="1216.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="1265.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Announcement = canonical</text>
+<text x="330.0" y="1282.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">PDA, empty, System-owned?</text>
+<text x="512.0" y="1261.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="1265.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">AnnouncementAddressMismatch (14)</text>
+<text x="634.0" y="1282.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">AnnouncementInUse (15)</text>
+<text x="340.0" y="1328.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="1366.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">CPI System: top up rent deficit</text>
+<text x="330.0" y="1383.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">from the payer, only if short</text>
+<text x="330.0" y="1452.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">CPI System: Allocate 68 B, Assign</text>
+<text x="330.0" y="1469.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">to SCOPE, signed by the PDA</text>
+<text x="330.0" y="1538.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Write record</text>
+<text x="330.0" y="1555.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">disc, version, view_tag, bump, R, payer</text>
+<text x="330.0" y="1624.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Announced</text>
+<text x="330.0" y="1641.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">scan can now find the payment</text>
+<text x="634.0" y="52.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Every failure reverts the whole payer</text>
+<text x="634.0" y="69.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">transaction: account setup and the</text>
+<text x="634.0" y="86.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">transfer too. Error codes: Custom(n).</text>
+</svg></div><figcaption><b>Flow: announce.</b> Every check is a decision with its own error; any failure reverts the payer's whole setup transaction.</figcaption></figure>
+<figure class="tall"><div class="svgwrap"><svg viewBox="0 0 1000 1034" role="img" aria-label="Flow: reclaim"><defs>
+<marker id="reclaim-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+<marker id="reclaim-cpi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#be123c"/></marker>
+<marker id="reclaim-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+<marker id="reclaim-funds" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+<marker id="reclaim-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="reclaim-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="reclaim-admin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="reclaim-offchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+</defs>
+<rect width="1000" height="1034" fill="#ffffff"/>
+<rect x="140" y="20" width="380" height="56" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<polygon points="330.0,106.0 500.0,149.0 330.0,192.0 160.0,149.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="123.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,218.0 500.0,261.0 330.0,304.0 160.0,261.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="235.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,330.0 500.0,373.0 330.0,416.0 160.0,373.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="347.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,442.0 500.0,485.0 330.0,528.0 160.0,485.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="451.0" width="350" height="68" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<polygon points="330.0,554.0 500.0,597.0 330.0,640.0 160.0,597.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="571.0" width="350" height="52" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<rect x="140" y="670.0" width="380" height="56" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<polygon points="330.0,756.0 500.0,799.0 330.0,842.0 160.0,799.0" fill="#fffbea" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="620" y="765" width="350" height="68" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5"/>
+<rect x="140" y="872" width="380" height="56" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="140" y="958" width="380" height="56" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.5"/>
+<rect x="620" y="20" width="350" height="90" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+<path d="M330,76 L330,100.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M500.0,149.0 L612,149.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#reclaim-no)"/>
+<path d="M330,192.0 L330,212.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M500.0,261.0 L612,261.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#reclaim-no)"/>
+<path d="M330,304.0 L330,324.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M500.0,373.0 L612,373.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#reclaim-no)"/>
+<path d="M330,416.0 L330,436.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M500.0,485.0 L612,485.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#reclaim-no)"/>
+<path d="M330,528.0 L330,548.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M500.0,597.0 L612,597.0" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#reclaim-no)"/>
+<path d="M330,640.0 L330,664.0" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M330,726 L330,750" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M500,799 L612,799" fill="none" stroke="#b91c1c" stroke-width="1.6" marker-end="url(#reclaim-no)"/>
+<path d="M330,842 L330,866" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<path d="M330,928 L330,952" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#reclaim-flow)"/>
+<rect x="150" y="11" width="103" height="18" rx="9" fill="#1f2933"/><text x="201.4" y="24" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">NO SIGNER CHECK</text>
+<rect x="90.0" y="141.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="154.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ15</text>
+<rect x="90.0" y="253.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="266.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ16</text>
+<rect x="90.0" y="365.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="378.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ17</text>
+<rect x="90.0" y="477.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="490.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ18</text>
+<rect x="90.0" y="589.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="602.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ19</text>
+<rect x="80.0" y="690.0" width="48" height="19" rx="4" fill="#1f2933"/><text x="104.0" y="703.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ20</text>
+<rect x="90.0" y="791" width="48" height="19" rx="4" fill="#1f2933"/><text x="114.0" y="804.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ20</text>
+<rect x="80.0" y="892" width="48" height="19" rx="4" fill="#1f2933"/><text x="104.0" y="905.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ21</text>
+<text x="330.0" y="44.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Any caller submits reclaim()</text>
+<text x="330.0" y="61.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">usually last in the recipient's sweep</text>
+<text x="330.0" y="145.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">No data after</text>
+<text x="330.0" y="162.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">the tag?</text>
+<text x="512.0" y="141.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="153.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">InvalidInstructionData (1)</text>
+<text x="340.0" y="208.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="257.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">4th account is</text>
+<text x="330.0" y="274.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Token-2022?</text>
+<text x="512.0" y="253.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="265.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">WrongTokenProgram (4)</text>
+<text x="340.0" y="320.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="369.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Announcement owned by SCOPE,</text>
+<text x="330.0" y="386.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">68 B, disc and version 1?</text>
+<text x="512.0" y="365.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="377.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">NotAnnouncement (16)</text>
+<text x="340.0" y="432.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="481.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Announcement = PDA(&quot;ann&quot;,</text>
+<text x="330.0" y="498.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">token account, stored bump)?</text>
+<text x="512.0" y="477.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="481.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">AnnouncementAddressMismatch (14)</text>
+<text x="634.0" y="498.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">a decoy token account ends here</text>
+<text x="340.0" y="544.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="601.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Payer = stored payer?</text>
+<text x="512.0" y="589.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="601.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">PayerMismatch (17)</text>
+<text x="340.0" y="656.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="694.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">CPI Token-2022 CloseAccount</text>
+<text x="330.0" y="711.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">destination payer, signed by the PDA</text>
+<text x="330.0" y="795.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">Token-2022: every</text>
+<text x="330.0" y="812.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#1f2933">balance zero?</text>
+<text x="512.0" y="791.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">no</text>
+<text x="634.0" y="786.5" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">Token-2022 refuses CloseAccount</text>
+<text x="634.0" y="803.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">tx reverts, announcement stays,</text>
+<text x="634.0" y="820.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">rent stays locked</text>
+<text x="340.0" y="858.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">yes</text>
+<text x="330.0" y="896.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Move announcement lamports to</text>
+<text x="330.0" y="913.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">the payer, close the announcement</text>
+<text x="330.0" y="982.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Reclaimed</text>
+<text x="330.0" y="999.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">both rents are back with the payer</text>
+<text x="634.0" y="52.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Anyone may call reclaim. The refund can</text>
+<text x="634.0" y="69.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">only go to the payer stored in the</text>
+<text x="634.0" y="86.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">announcement, so no signer is needed.</text>
+</svg></div><figcaption><b>Flow: reclaim.</b> No signer is checked. The PDA check with the stored bump stops a decoy token account; Token-2022 refuses to close while any balance is left.</figcaption></figure>
+<figure class=""><div class="svgwrap"><svg viewBox="0 0 1240 760" role="img" aria-label="Accounts, PDA derivation and authority changes"><defs>
+<marker id="accounts-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+<marker id="accounts-cpi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#be123c"/></marker>
+<marker id="accounts-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+<marker id="accounts-funds" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+<marker id="accounts-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="accounts-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="accounts-admin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="accounts-offchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+</defs>
+<rect width="1240" height="760" fill="#ffffff"/>
+<rect x="20" y="46" width="120" height="50" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="160" y="46" width="200" height="50" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="420" y="40" width="280" height="62" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<rect x="760" y="36" width="240" height="70" rx="8" fill="#f1ebfe" stroke="#6d28d9" stroke-width="2"/>
+<rect x="764" y="40" width="232" height="62" rx="5" fill="none" stroke="#6d28d9" stroke-width="1"/>
+<rect x="1020" y="36" width="200" height="70" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+<rect x="20" y="136" width="120" height="50" rx="8" fill="#fff4de" stroke="#1f2933" stroke-width="2.5"/>
+<rect x="160" y="130" width="200" height="62" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="160" y="202" width="200" height="34" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+<rect x="420" y="130" width="280" height="62" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="760" y="126" width="240" height="70" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="1020" y="126" width="200" height="70" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+<rect x="20" y="312" width="220" height="104" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="264" y="312" width="220" height="104" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="508" y="312" width="220" height="104" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="752" y="312" width="220" height="104" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="996" y="312" width="220" height="104" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<rect x="20" y="552" width="220" height="96" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<rect x="264" y="552" width="220" height="96" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="508" y="552" width="220" height="96" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<rect x="752" y="552" width="220" height="96" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="996" y="552" width="220" height="96" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="20" y="672" width="1200" height="64" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+<path d="M360,71 L412,71" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M700,71 L752,71" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M360,161 L412,161" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M700,161 L752,161" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M240,364 L258,364" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M484,364 L502,364" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M728,364 L746,364" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M972,364 L990,364" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#accounts-flow)"/>
+<path d="M20,438 L460,438" fill="none" stroke="#b45309" stroke-width="3"/>
+<path d="M508,438 L972,438" fill="none" stroke="#0f766e" stroke-width="1.6" stroke-dasharray="5 4"/>
+<rect x="770" y="27" width="32" height="18" rx="9" fill="#1f2933"/><text x="785.9" y="40" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">PDA</text>
+<rect x="770" y="117" width="121" height="18" rx="9" fill="#1f2933"/><text x="830.3" y="130" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">TOKEN-2022 ACCOUNT</text>
+<text x="20.0" y="26.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#52606d" letter-spacing="1">HOW THE TWO SCOPE ADDRESSES ARE DERIVED</text>
+<text x="80.0" y="75.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">&quot;ann&quot;</text>
+<text x="260.0" y="75.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">token_account address</text>
+<text x="560.0" y="67.0" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">find_program_address</text>
+<text x="560.0" y="84.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">SCOPE id, canonical bump</text>
+<text x="880.0" y="67.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Announcement PDA</text>
+<text x="880.0" y="84.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">bump stored at byte 3</text>
+<text x="1034.0" y="67.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">reclaim re-derives it with</text>
+<text x="1034.0" y="84.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">the stored bump (REQ18)</text>
+<text x="80.0" y="165.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">payer</text>
+<text x="260.0" y="157.0" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">sha256(&quot;stealth-ta/v1&quot;‖R)</text>
+<text x="260.0" y="174.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">first 16 B, lowercase hex</text>
+<text x="260.0" y="223.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">Token-2022 program id</text>
+<text x="560.0" y="157.0" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">create_with_seed</text>
+<text x="560.0" y="174.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">System program allocates</text>
+<text x="880.0" y="157.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">One-time token account</text>
+<text x="880.0" y="174.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">address, not a PDA</text>
+<text x="1034.0" y="157.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">only the payer can allocate</text>
+<text x="1034.0" y="174.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">it; announce checks it (REQ05)</text>
+<text x="20.0" y="290.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#52606d" letter-spacing="1">ONE-TIME TOKEN ACCOUNT: AUTHORITY ACROSS THE PAYER TRANSACTION</text>
+<text x="34.0" y="343.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Created</text>
+<text x="34.0" y="360.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">InitializeAccount3</text>
+<text x="34.0" y="377.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority: payer</text>
+<text x="34.0" y="394.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">close authority: none</text>
+<text x="278.0" y="343.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Configured</text>
+<text x="278.0" y="360.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">ConfigureAccount,</text>
+<text x="278.0" y="377.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">DisableNonConfidentialCredits</text>
+<text x="278.0" y="394.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">cap 1, public credits off</text>
+<text x="522.0" y="343.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Handed over</text>
+<text x="522.0" y="360.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">SetAuthority x2</text>
+<text x="522.0" y="377.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority: P</text>
+<text x="522.0" y="394.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">close authority: PDA</text>
+<text x="766.0" y="343.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Announced, funded</text>
+<text x="766.0" y="360.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">announce, then Transfer</text>
+<text x="766.0" y="377.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">one pending credit</text>
+<text x="766.0" y="394.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">checked: REQ05 to REQ11</text>
+<text x="1010.0" y="343.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Closed</text>
+<text x="1010.0" y="360.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">after the sweep, reclaim</text>
+<text x="1010.0" y="377.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">rent to the payer</text>
+<text x="1010.0" y="394.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">REQ20, REQ21</text>
+<text x="24.0" y="456.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">authority: payer</text>
+<text x="512.0" y="456.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">authority: P, the recipient's one-time key</text>
+<text x="20.0" y="530.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#52606d" letter-spacing="1">OTHER ACCOUNTS IN A PAYMENT</text>
+<text x="34.0" y="579.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Payer wallet</text>
+<text x="34.0" y="596.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">system account</text>
+<text x="34.0" y="613.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">signs announce and setup</text>
+<text x="34.0" y="630.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">receives both rents</text>
+<text x="278.0" y="579.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Payer source</text>
+<text x="278.0" y="596.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Token-2022 account</text>
+<text x="278.0" y="613.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority: payer</text>
+<text x="278.0" y="630.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">confidential balance</text>
+<text x="522.0" y="579.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">P</text>
+<text x="522.0" y="596.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">system account, no data</text>
+<text x="522.0" y="613.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">funded by the payer</text>
+<text x="522.0" y="630.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">signs and pays the sweep</text>
+<text x="766.0" y="579.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Destination D</text>
+<text x="766.0" y="596.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Token-2022 account</text>
+<text x="766.0" y="613.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority: D_owner</text>
+<text x="766.0" y="630.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">created in the sweep</text>
+<text x="1010.0" y="579.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Mint</text>
+<text x="1010.0" y="596.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Token-2022 mint</text>
+<text x="1010.0" y="613.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">auto-approve accounts</text>
+<text x="1010.0" y="630.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">optional auditor key</text>
+<text x="34.0" y="700.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Program-owned state is only the Announcement. Every other account is owned by Token-2022 or the System program;</text>
+<text x="34.0" y="717.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">the SCOPE program never holds tokens and holds no authority over funds (close authority works only at zero balance).</text>
+</svg></div><figcaption><b>Accounts and PDAs.</b> Both derivations with their seeds, the authority change of the one-time account across the payer transaction, and every other account a payment touches.</figcaption></figure>
+<figure class=""><div class="svgwrap"><svg viewBox="0 0 1260 690" role="img" aria-label="End to end, with external actors"><defs>
+<marker id="e2e-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+<marker id="e2e-cpi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#be123c"/></marker>
+<marker id="e2e-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+<marker id="e2e-funds" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+<marker id="e2e-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="e2e-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="e2e-admin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="e2e-offchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+</defs>
+<rect width="1260" height="690" fill="#ffffff"/>
+<rect x="20" y="50" width="260" height="470" rx="8" fill="#fffaf2" stroke="#b45309" stroke-width="1.2" stroke-dasharray="3 5"/>
+<rect x="420" y="50" width="400" height="480" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 5"/>
+<rect x="960" y="50" width="280" height="470" rx="8" fill="#f4fbf9" stroke="#0f766e" stroke-width="1.2" stroke-dasharray="3 5"/>
+<rect x="40" y="96" width="220" height="64" rx="8" fill="#fff4de" stroke="#1f2933" stroke-width="2.5"/>
+<rect x="40" y="180" width="220" height="150" rx="8" fill="#fff4e0" stroke="#b45309" stroke-width="1.5"/>
+<path d="M40,381 V433 A50.0,9 0 0 0 140,433 V381 A50.0,9 0 0 0 40,381 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/><path d="M40,381 A50.0,9 0 0 0 140,381" fill="none" stroke="#64748b" stroke-width="1.5"/>
+<path d="M160,381 V433 A50.0,9 0 0 0 260,433 V381 A50.0,9 0 0 0 160,381 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/><path d="M160,381 A50.0,9 0 0 0 260,381" fill="none" stroke="#64748b" stroke-width="1.5"/>
+<rect x="440" y="80" width="170" height="70" rx="8" fill="#fde8ec" stroke="#be123c" stroke-width="2"/>
+<rect x="630" y="80" width="170" height="70" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="440" y="165" width="170" height="40" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="630" y="165" width="170" height="40" rx="8" fill="#e7ecf2" stroke="#475569" stroke-width="1.5"/>
+<rect x="440" y="240" width="170" height="80" rx="8" fill="#f1ebfe" stroke="#6d28d9" stroke-width="2"/>
+<rect x="444" y="244" width="162" height="72" rx="5" fill="none" stroke="#6d28d9" stroke-width="1"/>
+<rect x="630" y="240" width="170" height="80" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="440" y="350" width="170" height="64" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<rect x="630" y="350" width="170" height="64" rx="8" fill="#dcf3ee" stroke="#0f766e" stroke-width="1.5"/>
+<rect x="980" y="96" width="240" height="64" rx="8" fill="#fff4de" stroke="#1f2933" stroke-width="2.5"/>
+<rect x="980" y="180" width="240" height="120" rx="8" fill="#fff4e0" stroke="#b45309" stroke-width="1.5"/>
+<rect x="980" y="340" width="240" height="64" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 4"/>
+<path d="M398.9,445.0 A28.1,28.1 0 0 1 389.6,463.2 A28.1,28.1 0 0 1 365.1,474.4 A28.1,28.1 0 0 1 334.9,474.4 A28.1,28.1 0 0 1 310.4,463.2 A28.1,28.1 0 0 1 301.1,445.0 A28.1,28.1 0 0 1 310.4,426.8 A28.1,28.1 0 0 1 334.9,415.6 A28.1,28.1 0 0 1 365.1,415.6 A28.1,28.1 0 0 1 389.6,426.8 A28.1,28.1 0 0 1 398.9,445.0 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/>
+<path d="M938.9,245.0 A28.1,28.1 0 0 1 929.6,263.2 A28.1,28.1 0 0 1 905.1,274.4 A28.1,28.1 0 0 1 874.9,274.4 A28.1,28.1 0 0 1 850.4,263.2 A28.1,28.1 0 0 1 841.1,245.0 A28.1,28.1 0 0 1 850.4,226.8 A28.1,28.1 0 0 1 874.9,215.6 A28.1,28.1 0 0 1 905.1,215.6 A28.1,28.1 0 0 1 929.6,226.8 A28.1,28.1 0 0 1 938.9,245.0 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/>
+<path d="M938.9,605.0 A28.1,28.1 0 0 1 929.6,623.2 A28.1,28.1 0 0 1 905.1,634.4 A28.1,28.1 0 0 1 874.9,634.4 A28.1,28.1 0 0 1 850.4,623.2 A28.1,28.1 0 0 1 841.1,605.0 A28.1,28.1 0 0 1 850.4,586.8 A28.1,28.1 0 0 1 874.9,575.6 A28.1,28.1 0 0 1 905.1,575.6 A28.1,28.1 0 0 1 929.6,586.8 A28.1,28.1 0 0 1 938.9,605.0 Z" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/>
+<rect x="440" y="572" width="170" height="70" rx="8" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/>
+<rect x="630" y="572" width="170" height="70" rx="8" fill="#f5f7fa" stroke="#64748b" stroke-width="1.5"/>
+<rect x="980" y="572" width="240" height="70" rx="8" fill="#ffffff" stroke="#1f2933" stroke-width="1.5" stroke-dasharray="6 4"/>
+<path d="M90,330 L90,364" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#e2e-read)"/>
+<path d="M715,320 L715,342" fill="none" stroke="#b45309" stroke-width="3" marker-end="url(#e2e-funds)"/>
+<path d="M1100,96 L1100,24 L150,24 L150,88" fill="none" stroke="#0f766e" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#e2e-offchain)"/>
+<path d="M260,310 L272,310 L272,440 L286,440" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#e2e-flow)"/>
+<path d="M413,445 L430,445 L430,285 L432,285" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#e2e-flow)"/>
+<path d="M980,225 L955,225" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#e2e-read)"/>
+<path d="M829,262 L808,262" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#e2e-read)"/>
+<path d="M980,275 L955,275" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#e2e-flow)"/>
+<path d="M860,290 L860,382 L808,382" fill="none" stroke="#1f2933" stroke-width="1.6" marker-end="url(#e2e-flow)"/>
+<path d="M470,240 L470,226 L300,226 L300,128 L268,128" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="7 4" marker-end="url(#e2e-rent)"/>
+<path d="M1220,128 L1250,128 L1250,607 L1228,607" fill="none" stroke="#0f766e" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#e2e-offchain)"/>
+<path d="M980,607 L955,607" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#e2e-read)"/>
+<path d="M850,566 L826,534" fill="none" stroke="#52606d" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#e2e-read)"/>
+<path d="M600,572 L600,556 L620,556 L620,118 L614,118" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="2 4" marker-end="url(#e2e-admin)"/>
+<path d="M715,572 L715,536" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="2 4" marker-end="url(#e2e-admin)"/>
+<rect x="50" y="87" width="132" height="18" rx="9" fill="#1f2933"/><text x="116.2" y="100" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">SIGNER · BENEFICIARY</text>
+<rect x="450" y="231" width="32" height="18" rx="9" fill="#1f2933"/><text x="465.9" y="244" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">PDA</text>
+<rect x="990" y="87" width="132" height="18" rx="9" fill="#1f2933"/><text x="1056.2" y="100" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">SIGNER · BENEFICIARY</text>
+<rect x="450" y="563" width="91" height="18" rx="9" fill="#1f2933"/><text x="495.5" y="576" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">ADMINISTRATOR</text>
+<rect x="640" y="563" width="91" height="18" rx="9" fill="#1f2933"/><text x="685.5" y="576" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">ADMINISTRATOR</text>
+<rect x="990" y="563" width="79" height="18" rx="9" fill="#1f2933"/><text x="1029.6" y="576" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="10" font-weight="600" fill="#ffffff" letter-spacing="0.5">BENEFICIARY</text>
+<rect x="304.4" y="539" width="91" height="19" rx="4" fill="#1f2933"/><text x="350.0" y="552.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ01–REQ13</text>
+<rect x="868.0" y="343" width="91" height="19" rx="4" fill="#1f2933"/><text x="913.6" y="356.5" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="600" fill="#ffffff">REQ14–REQ21</text>
+<text x="34.0" y="72.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#52606d" letter-spacing="1">PAYER, OFF CHAIN</text>
+<text x="54.0" y="124.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Payer</text>
+<text x="54.0" y="141.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">treasury operator, keypair</text>
+<text x="54.0" y="225.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">scope CLI: pay</text>
+<text x="54.0" y="242.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">derive P, view tag, keys</text>
+<text x="54.0" y="259.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">build setup tx, prove</text>
+<text x="54.0" y="276.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">simulate, send, resume</text>
+<text x="54.0" y="293.5" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">sample priority fees</text>
+<text x="90.0" y="407.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">journal</text>
+<text x="90.0" y="424.0" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">jsonl</text>
+<text x="210.0" y="407.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">payroll</text>
+<text x="210.0" y="424.0" text-anchor="middle" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11.5" font-weight="400" fill="#1f2933">csv</text>
+<text x="434.0" y="72.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#52606d" letter-spacing="1">SOLANA, ON CHAIN</text>
+<text x="454.0" y="111.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">SCOPE program</text>
+<text x="454.0" y="128.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">announce, reclaim</text>
+<text x="644.0" y="111.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Token-2022</text>
+<text x="644.0" y="128.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">confidential transfer</text>
+<text x="525.0" y="189.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">System program</text>
+<text x="715.0" y="189.5" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">ZK ElGamal proofs</text>
+<text x="454.0" y="276.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Announcement</text>
+<text x="454.0" y="293.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">68 B per payment</text>
+<text x="644.0" y="276.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">One-time account</text>
+<text x="644.0" y="293.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority P</text>
+<text x="454.0" y="378.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">P</text>
+<text x="454.0" y="395.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">pays the sweep fee</text>
+<text x="644.0" y="378.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Destination D</text>
+<text x="644.0" y="395.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">authority D_owner</text>
+<text x="974.0" y="72.0" text-anchor="start" font-family="IBM Plex Mono, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#52606d" letter-spacing="1">RECIPIENT, OFF CHAIN</text>
+<text x="994.0" y="124.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Recipient</text>
+<text x="994.0" y="141.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">b_scan, b_spend; signs as P</text>
+<text x="994.0" y="219.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">scope CLI: scan, sweep</text>
+<text x="994.0" y="236.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">filter by view tag</text>
+<text x="994.0" y="253.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">derive p and D_owner</text>
+<text x="994.0" y="270.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">build and sign the sweep</text>
+<text x="1100.0" y="368.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">Registry (P4, not in POC)</text>
+<text x="1100.0" y="385.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">on-chain meta-addresses</text>
+<text x="350.0" y="441.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">RPC</text>
+<text x="350.0" y="458.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">provider</text>
+<text x="890.0" y="241.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">RPC</text>
+<text x="890.0" y="258.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">provider</text>
+<text x="890.0" y="601.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Archival</text>
+<text x="890.0" y="618.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">RPC</text>
+<text x="454.0" y="603.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Squads multisig</text>
+<text x="454.0" y="620.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">admin: upgrades SCOPE</text>
+<text x="644.0" y="603.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Mint authority</text>
+<text x="644.0" y="620.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">admin: mint policy</text>
+<text x="994.0" y="603.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#1f2933">Auditor</text>
+<text x="994.0" y="620.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#52606d">reads one amount by receipt</text>
+<text x="620.0" y="18.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">1 · meta-address, once, off chain</text>
+<text x="350.0" y="512.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">2 · payer tx: setup,</text>
+<text x="350.0" y="527.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">announce, transfer</text>
+<text x="890.0" y="190.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">3 · scan, view tag</text>
+<text x="868.0" y="330.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">4 · sweep, 1 tx</text>
+<text x="306.0" y="218.0" text-anchor="start" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">5 · rent back</text>
+<text x="1244.0" y="530.0" text-anchor="end" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">6 · receipt</text>
+<text x="890.0" y="672.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#1f2933">7 · verify the payment tx</text>
+</svg></div><figcaption><b>End to end.</b> Off-chain clients on both sides, RPC providers as external services, the Squads upgrade authority and the mint authority as administrators, the auditor as beneficiary. The registry is roadmap.</figcaption></figure>
+<h2 id="s10">10. External dependencies</h2>
+<div class="tw"><table><thead><tr><th scope="col">Dependency</th><th scope="col">Kind</th><th scope="col">Integration point</th></tr></thead><tbody><tr><td>Token-2022 program</td><td>Solana program</td><td>holds and moves every token; confidential transfer extension; CloseAccount CPI</td></tr><tr><td>ZK ElGamal proof program</td><td>Solana program</td><td>verifies the proofs inline in both transactions</td></tr><tr><td>System program</td><td>Solana program</td><td>create_with_seed, Transfer, Allocate, Assign</td></tr><tr><td>RPC provider</td><td>external service</td><td>sends transactions; getProgramAccounts for scan</td></tr><tr><td>Archival RPC</td><td>external service</td><td>getTransaction with maxSupportedTransactionVersion 1 for receipt checks</td></tr><tr><td>Squads multisig</td><td>administrator</td><td>program upgrade authority on devnet</td></tr><tr><td>Mint authority</td><td>administrator</td><td>approval policy, freeze, optional auditor key</td></tr></tbody></table></div>
+<h2 id="s11">11. Scope and milestones</h2>
+<p>POC scope: announce and reclaim on chain; the payer engine for plain and stealth rows; scan, sweep and receipts in the CLI; a mixed payout on devnet. Roadmap only: the on-chain meta-address registry (P4 decision), an issuer approval service, wallet integration.</p>
+<div class="tw"><table><thead><tr><th scope="col">Phase</th><th scope="col">Work</th><th scope="col">Status</th></tr></thead><tbody><tr><td>P1 Prove the design</td><td>one transaction per side; announce and reclaim with the decoy test</td><td>done in LiteSVM and Surfpool; devnet pending</td></tr><tr><td>P2 First payments</td><td>plain run on devnet; announce on devnet; scan; attack tests for announce</td><td>plain payouts on Surfpool; attack tests done</td></tr><tr><td>P3 Stealth end to end</td><td>reclaim on devnet; sweep; disclose</td><td>next</td></tr><tr><td>P4 Hardening</td><td>chaos harness, CU ceilings, S5, verify, registry decision</td><td>CU ceilings and S5 done early</td></tr><tr><td>P5 Ship</td><td>50-recipient devnet run, measurements, demo, sRFC-42 write-up</td><td></td></tr></tbody></table></div>
+<h2 id="s12">12. Final checklist</h2>
+<div class="tw"><table><thead><tr><th scope="col">Item</th><th scope="col">Where</th></tr></thead><tbody><tr><td>All programs represented</td><td>Overview, End to end</td></tr><tr><td>Account structures mapped</td><td>Accounts and PDAs; section 7</td></tr><tr><td>Program interactions illustrated</td><td>Overview arrows 2, 3, 6; section 7 CPIs</td></tr><tr><td>Validation points included</td><td>announce and reclaim flows, one decision per check</td></tr><tr><td>External dependencies shown</td><td>End to end; section 10</td></tr><tr><td>Decision points and alternate flows</td><td>both flows, every no branch ends in its error</td></tr><tr><td>All actor categories, signers distinguished</td><td>legend; Overview; End to end; section 2</td></tr><tr><td>Every matrix item on a diagram</td><td>section 6 Diagram label column</td></tr><tr><td>Clear, consistent labelling</td><td>one legend, REQ pills on every carrying arrow or decision</td></tr></tbody></table></div>
+<footer>
+  <span>Individual reflections are submitted separately by each member.</span>
+  <span>Whiteboard version: <a href="scope-d2.excalidraw">scope-d2.excalidraw</a> (open at excalidraw.com). Source code and design docs: github.com/scope-protocol/scope.</span>
+</footer>
+</main>
+</body>
+</html>
