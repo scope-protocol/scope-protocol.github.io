@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SCOPE, a confidential payout rail on Solana, in six views from the product story down to the crates.">
+<style>body{margin:0}</style>
+<title>SCOPE Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: six views, each answering one question, zooming from the product down to the code. Three meaning colors: payer, recipient, our program. */
+:root {
+  --paper: #f3f6f7; --plate: #ffffff; --ink: #15212b; --muted: #5b6874; --rule: #d6dee3;
+  --payer: #b45309; --payer-bg: #fcf0db;
+  --recip: #0f766e; --recip-bg: #daf2ed;
+  --ours: #be123c;  --ours-bg: #fce4e9;
+  --slate: #475569; --slate-bg: #e8edf2;
+  --rent: #15803d;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0e141a; --plate: #141c24; --ink: #e2e9ee; --muted: #93a2ae; --rule: #28343f;
+    --payer: #f0a44b; --payer-bg: #372811; --recip: #3cc4b0; --recip-bg: #0e2e2a;
+    --ours: #fb7190; --ours-bg: #3a1621; --slate: #a3b3c5; --slate-bg: #1d2731; --rent: #4ade80;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0e141a; --plate: #141c24; --ink: #e2e9ee; --muted: #93a2ae; --rule: #28343f;
+  --payer: #f0a44b; --payer-bg: #372811; --recip: #3cc4b0; --recip-bg: #0e2e2a;
+  --ours: #fb7190; --ours-bg: #3a1621; --slate: #a3b3c5; --slate-bg: #1d2731; --rent: #4ade80;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 400 1rem/1.6 var(--f-body); padding-inline: clamp(16px, 4vw, 48px); padding-block: 0 64px; }
+.wrap { max-width: 1120px; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+p { margin: 0; max-width: 66ch; }
+code { font-family: var(--f-mono); font-size: 0.86em; }
+:focus-visible { outline: 2px solid var(--payer); outline-offset: 2px; border-radius: 3px; }
+
+header.hero { padding-block: 56px 36px; display: grid; gap: 20px; }
+.eyebrow { font: 600 12px/1 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hero h1 { font-size: clamp(3rem, 8vw, 4.75rem); font-weight: 800; line-height: 0.9; letter-spacing: -0.03em; }
+.thesis { font-size: 1.25rem; line-height: 1.45; max-width: 56ch; }
+.claims { display: flex; flex-wrap: wrap; gap: 8px 28px; list-style: none; margin: 0; padding: 0; font-weight: 500; }
+.claims li { display: flex; gap: 10px; align-items: baseline; }
+.claims li::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--ink); transform: translateY(-2px); }
+
+nav.rail { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); margin-inline: calc(-1 * clamp(16px, 4vw, 48px)); padding-inline: clamp(16px, 4vw, 48px); }
+nav.rail ol { list-style: none; margin: 0 auto; padding: 10px 0; max-width: 1120px; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+nav.rail a { display: block; text-decoration: none; padding: 7px 12px; border-radius: 6px; white-space: nowrap; font-size: 0.875rem; color: var(--muted); }
+nav.rail a:hover { background: var(--plate); color: var(--ink); }
+nav.rail a.on { background: var(--ink); color: var(--paper); }
+
+section.view { padding-block: 64px 0; display: grid; gap: 22px; scroll-margin-top: 56px; }
+.vh { display: grid; gap: 4px; }
+.vh .n { font: 600 12px var(--f-mono); letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+.vh h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.015em; }
+.vh p { font-size: 1.125rem; color: var(--muted); }
+
+figure { margin: 0; background: var(--plate); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.scroll { overflow-x: auto; padding: 24px; }
+.scroll svg { display: block; width: 100%; height: auto; min-width: 760px; }
+figcaption { border-top: 1px solid var(--rule); padding: 14px 24px; font-size: 0.875rem; color: var(--muted); }
+figcaption b { color: var(--ink); font-weight: 600; }
+
+/* svg vocabulary */
+svg text { font-family: var(--f-body); fill: var(--ink); }
+svg .t { font-weight: 600; font-size: 15px; }
+svg .s { font-size: 12.5px; fill: var(--muted); }
+svg .m { font-family: var(--f-mono); font-size: 11.5px; fill: var(--muted); }
+svg .lab { font-family: var(--f-mono); font-size: 11.5px; }
+svg .zt { font-family: var(--f-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.b rect { fill: var(--plate); stroke: var(--slate); stroke-width: 1.5; }
+.b.pub rect { fill: var(--slate-bg); }
+.b.payer rect { fill: var(--payer-bg); stroke: var(--payer); }
+.b.recip rect { fill: var(--recip-bg); stroke: var(--recip); }
+.b.ours rect { fill: var(--ours-bg); stroke: var(--ours); stroke-width: 2; }
+.b.open rect { stroke-dasharray: 6 4; }
+.b.contract rect { stroke: var(--ours); stroke-width: 3; }
+.zone { fill: none; stroke-width: 1.5; stroke-dasharray: 2 5; }
+.zone.payer { stroke: var(--payer); } .zone.recip { stroke: var(--recip); } .zone.pub { stroke: var(--slate); fill: color-mix(in srgb, var(--slate-bg) 40%, transparent); }
+.c-payer { fill: var(--payer); } .c-recip { fill: var(--recip); } .c-ours { fill: var(--ours); } .c-slate { fill: var(--slate); } .c-rent { fill: var(--rent); }
+.e { fill: none; stroke: var(--slate); stroke-width: 1.5; }
+.e.read { stroke-dasharray: 4 4; }
+.e.funds { stroke: var(--payer); stroke-width: 3.5; }
+.e.recip { stroke: var(--recip); stroke-width: 2; }
+.e.ours { stroke: var(--ours); stroke-width: 2; }
+.e.rent { stroke: var(--rent); stroke-width: 2; stroke-dasharray: 6 4; }
+.e.contract { stroke: var(--ours); stroke-width: 3; }
+.flow { stroke-dasharray: 10 8; animation: flow 1.4s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -36; } }
+.ah { fill: var(--slate); } .ah-funds { fill: var(--payer); } .ah-recip { fill: var(--recip); } .ah-ours { fill: var(--ours); } .ah-rent { fill: var(--rent); }
+
+/* overview promises */
+.promises { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.promise { display: grid; gap: 4px; align-content: start; padding: 16px 18px; border-radius: 8px; background: var(--plate); border: 1px solid var(--rule); border-top: 3px solid var(--recip); }
+.promise.vis { border-top-color: var(--payer); }
+.promise small { font: 600 11px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--recip); }
+.promise.vis small { color: var(--payer); }
+.promise b { font: 600 1.125rem/1.3 var(--f-display); }
+.promise p { font-size: 0.9375rem; color: var(--muted); }
+.aside { font-size: 0.9375rem; color: var(--muted); }
+.aside b { color: var(--ink); font-weight: 600; }
+
+/* payroll */
+.track { list-style: none; margin: 0; padding: 24px 24px 8px; display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
+.track::before { content: ""; position: absolute; left: calc(24px + 10%); right: calc(24px + 10%); top: 45px; height: 2px; background: var(--rule); }
+.track li { display: grid; justify-items: center; gap: 8px; position: relative; }
+.track button { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--rule); background: var(--plate); color: var(--muted); font: 600 15px var(--f-mono); cursor: pointer; transition: background 0.25s, border-color 0.25s, color 0.25s; }
+.track li.done button { border-color: var(--ink); color: var(--ink); }
+.track li.cur button { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.track span { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.track li.cur span, .track li.done span { color: var(--ink); }
+.stepcard { display: grid; gap: 6px; padding: 16px 24px 20px; min-height: 118px; }
+.stepcard h3 { font-size: 1.25rem; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.chip { font: 600 10.5px/1 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 999px; border: 1.5px solid var(--ink); white-space: nowrap; }
+.chip.built { background: var(--ink); color: var(--paper); }
+.chip.designed { color: var(--ink); }
+.chip.planned { color: var(--muted); border-color: var(--muted); border-style: dashed; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 24px; border-top: 1px solid var(--rule); }
+button.act { font: 600 0.875rem var(--f-body); color: var(--paper); background: var(--ink); border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1.5px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.seg button { font: 600 0.8125rem var(--f-body); color: var(--ink); background: var(--plate); border: 0; border-right: 1.5px solid var(--ink); padding: 7px 12px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.seglab { font-size: 0.8125rem; color: var(--muted); margin-right: 8px; }
+.tablewrap { overflow-x: auto; border-top: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; min-width: 600px; }
+th, td { text-align: left; padding: 10px 24px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 11px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
+td { font: 400 0.8125rem/1.5 var(--f-mono); font-variant-numeric: tabular-nums; }
+td.amt, th.amt { text-align: right; white-space: nowrap; }
+tr.new td { animation: rowin 0.5s ease both; }
+@keyframes rowin { from { opacity: 0; transform: translateY(-4px); background: var(--payer-bg); } }
+td.empty { font-family: var(--f-body); color: var(--muted); text-align: center; padding-block: 22px; }
+.ct { color: var(--muted); background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--muted) 16%, transparent) 4px 5px); padding: 1px 6px; border-radius: 3px; }
+.clear { color: var(--payer); font-weight: 600; }
+.tag { display: block; font: 500 11px var(--f-body); color: var(--muted); }
+.tag.link { color: var(--ours); } .tag.safe { color: var(--recip); }
+.viewnote { padding: 14px 24px; font-size: 0.9375rem; border-top: 1px solid var(--rule); }
+
+/* one payment */
+.sm .st rect { transition: stroke-width 0.2s; }
+.sm .st.hl rect { stroke-width: 3.5; }
+details { background: var(--plate); border: 1px solid var(--rule); border-radius: 10px; }
+details > summary { cursor: pointer; padding: 12px 20px; font-weight: 600; }
+details[open] > summary { border-bottom: 1px solid var(--rule); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 32px; padding: 16px 20px 20px; }
+.cols h3 { font-size: 1rem; margin-bottom: 8px; }
+.cols h3 small { font: 500 12px var(--f-body); color: var(--muted); margin-left: 6px; }
+ol.ix { margin: 0; padding-left: 1.6em; display: grid; gap: 2px; font-size: 0.875rem; }
+ol.ix li { padding: 2px 6px; border-radius: 4px; cursor: default; }
+ol.ix li::marker { font: 500 11px var(--f-mono); color: var(--muted); }
+ol.ix li.ours { color: var(--ours); font-weight: 600; }
+ol.ix li:hover, ol.ix li:focus { background: var(--paper); outline: none; }
+ul.checks { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 0.9375rem; }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 32px; }
+.notes div { display: grid; gap: 4px; align-content: start; }
+.notes h3 { font-size: 1rem; }
+.notes p { font-size: 0.9375rem; color: var(--muted); }
+
+footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); display: grid; gap: 6px; font-size: 0.8125rem; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .track { padding-inline: 8px; } .track::before { left: 10%; right: 10%; }
+  .track span { font-size: 0.75rem; }
+  th, td { padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow, tr.new td { animation: none; }
+  .track button, .sm .st rect { transition: none; }
+}
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-funds" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="ah-funds" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-recip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-recip" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-ours" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-ours" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-rent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-rent" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Architecture · program redesign of 2026-09-30</div>
+  <h1>SCOPE</h1>
+  <p class="thesis">A company pays many people on Solana. Amounts are encrypted, and a stealth recipient gets a fresh account per payment that nobody else can tie to them. The company stays visible, and an auditor can still read amounts.</p>
+  <ul class="claims">
+    <li>One transaction per side</li>
+    <li>Our program never holds funds</li>
+    <li>Rent comes back at sweep</li>
+  </ul>
+</header>
+
+<nav class="rail" aria-label="Views">
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#payroll">Payroll</a></li>
+    <li><a href="#system">System</a></li>
+    <li><a href="#payment">One payment</a></li>
+    <li><a href="#keys">Keys</a></li>
+    <li><a href="#code">Code</a></li>
+  </ol>
+</nav>
+
+<!-- 1 OVERVIEW -->
+<section class="view" id="overview">
+  <div class="vh"><span class="n">1 · Overview</span><h2>What is SCOPE?</h2><p>A payout rail where the payer is public and the payments are not.</p></div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 960 360" role="img" aria-label="A company pays a plain and a stealth recipient through the Solana ledger. A public observer reads the ledger and sees the payer and encrypted amounts. An auditor reads only what it is given.">
+        <g class="b payer"><rect x="20" y="140" width="190" height="80" rx="8"/></g>
+        <text class="t" x="40" y="174">Company</text><text class="s" x="40" y="196">the payer, visible</text>
+
+        <g class="b pub"><rect x="330" y="120" width="300" height="120" rx="8"/></g>
+        <text class="zt c-slate" x="350" y="148">Solana ledger</text>
+        <text class="lab" x="350" y="184">ACME → 8fKa…Q2</text><text class="lab c-slate" x="610" y="184" text-anchor="end">▒▒▒▒▒</text>
+        <text class="lab" x="350" y="212">ACME → 3JwX…m7</text><text class="lab c-slate" x="610" y="212" text-anchor="end">▒▒▒▒▒</text>
+
+        <g class="b recip"><rect x="760" y="70" width="180" height="80" rx="8"/></g>
+        <text class="t" x="780" y="104">Plain recipient</text><text class="s" x="780" y="126">fixed account</text>
+        <g class="b recip"><rect x="760" y="210" width="180" height="80" rx="8"/></g>
+        <text class="t" x="780" y="244">Stealth recipient</text><text class="s" x="780" y="266">fresh account each time</text>
+
+        <path class="e funds" d="M210,180 H322" marker-end="url(#ah-funds)"/>
+        <text class="lab c-payer" x="266" y="168" text-anchor="middle">pays</text>
+        <path class="e recip" d="M630,160 L752,118" marker-end="url(#ah-recip)"/>
+        <path class="e recip" d="M630,200 L752,242" marker-end="url(#ah-recip)"/>
+
+        <g class="b"><rect x="380" y="10" width="200" height="54" rx="8"/></g>
+        <text class="t" x="480" y="42" text-anchor="middle">Public observer</text>
+        <path class="e read" d="M480,64 V114" marker-end="url(#ah)"/>
+        <text class="m" x="490" y="94">reads everything</text>
+
+        <g class="b"><rect x="380" y="296" width="200" height="54" rx="8"/></g>
+        <text class="t" x="480" y="328" text-anchor="middle">Auditor</text>
+        <path class="e read" d="M480,296 V246" marker-end="url(#ah)"/>
+        <text class="m" x="490" y="276">reads what it is given</text>
+      </svg>
+    </div>
+  </figure>
+  <div class="promises">
+    <div class="promise"><small>Hidden</small><b>Every amount</b><p>Transfers are Token-2022 confidential transfers: the ledger holds ciphertext.</p></div>
+    <div class="promise"><small>Hidden</small><b>Who a stealth recipient is</b><p>Each payment lands in a fresh account that only the recipient's scan key recognizes.</p></div>
+    <div class="promise vis"><small>Visible on purpose</small><b>The payer</b><p>No pool, no relayer, no mixer. Amounts stay recoverable by receipt or the mint's auditor key.</p></div>
+  </div>
+  <p class="aside"><b>Not claimed:</b> privacy from the payer, privacy for the payer, anonymity. Merging several payments into one account links them again.</p>
+</section>
+
+<!-- 2 PAYROLL -->
+<section class="view" id="payroll">
+  <div class="vh"><span class="n">2 · Use case</span><h2>Confidential payroll</h2><p>How a company pays salaries without publishing them, and what each party sees.</p></div>
+  <figure id="player">
+    <ol class="track" id="track"></ol>
+    <div class="stepcard" aria-live="polite">
+      <h3><span id="sTitle"></span><span id="sChips"></span></h3>
+      <p id="sBody"></p>
+    </div>
+    <div class="bar">
+      <button type="button" class="act" id="play">Play from the start</button>
+      <div><span class="seglab">Seen by</span><span class="seg" role="group" aria-label="Seen by">
+        <button type="button" data-view="public" aria-pressed="true">Explorer</button>
+        <button type="button" data-view="payer" aria-pressed="false">Company</button>
+        <button type="button" data-view="ben" aria-pressed="false">Ben</button>
+        <button type="button" data-view="audit" aria-pressed="false">Auditor</button>
+      </span></div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col" class="amt">Amount, USDX</th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table>
+    </div>
+    <p class="viewnote" id="viewnote"></p>
+    <figcaption><b>Example data.</b> USDX stands for any Token-2022 stablecoin whose mint approves confidential accounts automatically. Before its first run the company moves treasury into a confidential balance once; that deposit is the only amount it ever shows.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 SYSTEM -->
+<section class="view" id="system">
+  <div class="vh"><span class="n">3 · System</span><h2>What runs where, and what touches money?</h2><p>Two command-line clients, Solana's own token programs, and one small program of ours beside the money path.</p></div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1000 400" role="img" aria-label="The payer's scope CLI pays through Token-2022 and announces through the SCOPE program. The recipient's CLI scans announcements and sweeps through Token-2022. The SCOPE program returns rent to the payer. An auditor reads the payment transaction.">
+        <rect class="zone payer" x="20" y="40" width="220" height="200" rx="12"/>
+        <text class="zt c-payer" x="38" y="66">Payer machine</text>
+        <g class="b payer"><rect x="40" y="100" width="180" height="80" rx="8"/></g>
+        <text class="t" x="58" y="134">scope pay</text><text class="s" x="58" y="156">keys, journal</text>
+
+        <rect class="zone pub" x="300" y="40" width="400" height="260" rx="12"/>
+        <text class="zt c-slate" x="318" y="66">Solana</text>
+        <g class="b pub"><rect x="330" y="84" width="340" height="72" rx="8"/></g>
+        <text class="t" x="350" y="114">Token-2022 + ZK proof program</text><text class="s" x="350" y="136">holds and moves every token</text>
+        <g class="b ours"><rect x="330" y="196" width="340" height="72" rx="8"/></g>
+        <text class="t" x="350" y="226">SCOPE program</text><text class="s" x="350" y="248">announce, reclaim</text>
+        <text class="lab c-ours" x="500" y="290" text-anchor="middle">Money moves only through Token-2022</text>
+
+        <rect class="zone recip" x="760" y="40" width="220" height="200" rx="12"/>
+        <text class="zt c-recip" x="778" y="66">Recipient machine</text>
+        <g class="b recip"><rect x="780" y="100" width="180" height="80" rx="8"/></g>
+        <text class="t" x="798" y="134">scope scan, sweep</text><text class="s" x="798" y="156">b_scan, b_spend</text>
+
+        <g class="b"><rect x="400" y="334" width="200" height="54" rx="8"/></g>
+        <text class="t" x="500" y="366" text-anchor="middle">Auditor: scope verify</text>
+
+        <path class="e funds flow" d="M220,120 H322" marker-end="url(#ah-funds)"/>
+        <text class="lab c-payer" x="271" y="110" text-anchor="middle">pays</text>
+        <path class="e ours" d="M220,160 H250 V222 H322" marker-end="url(#ah-ours)"/>
+        <text class="lab c-ours" x="258" y="212">announce</text>
+        <path class="e rent" d="M330,254 H130 V188" marker-end="url(#ah-rent)"/>
+        <text class="lab c-rent" x="140" y="272">rent back</text>
+        <path class="e recip flow" d="M780,120 H678" marker-end="url(#ah-recip)"/>
+        <text class="lab c-recip" x="729" y="110" text-anchor="middle">sweep</text>
+        <path class="e read" d="M780,160 H746 V232 H678" marker-end="url(#ah)"/>
+        <text class="m" x="706" y="252">scan</text>
+        <path class="e read" d="M500,334 V306" marker-end="url(#ah)"/>
+        <text class="m" x="510" y="326">reads the payment tx</text>
+      </svg>
+    </div>
+    <figcaption><b>Amber is money, red is our program.</b> One payer transaction pays and announces; one recipient transaction sweeps and triggers the rent refund. No relayer, no indexer, no second program, no on-chain registry in v1.</figcaption>
+  </figure>
+  <div class="notes">
+    <div><h3>The payer sets up a stranger's account</h3><p>Token-2022 checks only the current owner's signature. The payer owns the account while it configures it, then hands it to the recipient's one-time key P.</p></div>
+    <div><h3>Nobody can squat the address</h3><p>It is <code>create_with_seed(payer, R)</code>, which only the payer can allocate. A key shared by both sides was considered and not taken.</p></div>
+    <div><h3>Exactly one payment lands</h3><p><code>announce</code> refuses the account unless it takes one credit at most and no public credits.</p></div>
+  </div>
+</section>
+
+<!-- 4 ONE PAYMENT -->
+<section class="view" id="payment">
+  <div class="vh"><span class="n">4 · One payment</span><h2>What happens to the one-time account?</h2><p>Seven states across two atomic transactions. The chain itself is the status.</p></div>
+  <figure class="sm">
+    <div class="scroll">
+      <svg viewBox="0 0 1100 230" role="img" aria-label="The one-time account moves through seven states. In the payer transaction it is created, configured, handed over to P, announced and funded. In the recipient transaction it is swept and closed, with rent returned to the payer.">
+        <path d="M10,26 H306" class="e" style="stroke:var(--payer);stroke-width:3"/>
+        <text class="zt c-payer" x="10" y="16">owner: payer</text>
+        <path d="M322,26 H930" class="e" style="stroke:var(--recip);stroke-width:3"/>
+        <text class="zt c-recip" x="322" y="16">owner: P</text>
+
+        <g class="st" data-s="1"><g class="b"><rect x="10" y="44" width="140" height="80" rx="8"/></g><text class="t" x="24" y="72">Created</text><text class="s" x="24" y="94">only the payer can</text><text class="m" x="24" y="112">by payer</text></g>
+        <g class="st" data-s="2"><g class="b"><rect x="166" y="44" width="140" height="80" rx="8"/></g><text class="t" x="180" y="72">Configured</text><text class="s" x="180" y="94">1 credit, no public</text><text class="m" x="180" y="112">by payer</text></g>
+        <g class="st" data-s="3"><g class="b"><rect x="322" y="44" width="140" height="80" rx="8"/></g><text class="t" x="336" y="72">Handed over</text><text class="s" x="336" y="94">owner P, close: PDA</text><text class="m" x="336" y="112">by payer</text></g>
+        <g class="st" data-s="4"><g class="b ours"><rect x="478" y="44" width="140" height="80" rx="8"/></g><text class="t" x="492" y="72">Announced</text><text class="s" x="492" y="94">68 B: R, tag, payer</text><text class="m c-ours" x="492" y="112">by SCOPE</text></g>
+        <g class="st" data-s="5"><g class="b"><rect x="634" y="44" width="140" height="80" rx="8"/></g><text class="t" x="648" y="72">Funded</text><text class="s" x="648" y="94">one encrypted credit</text><text class="m" x="648" y="112">by payer</text></g>
+        <g class="st" data-s="6"><g class="b recip"><rect x="790" y="44" width="140" height="80" rx="8"/></g><text class="t" x="804" y="72">Swept</text><text class="s" x="804" y="94">whole balance to D</text><text class="m" x="804" y="112">by P</text></g>
+        <g class="st" data-s="7"><g class="b ours"><rect x="946" y="44" width="140" height="80" rx="8"/></g><text class="t" x="960" y="72">Closed</text><text class="s" x="960" y="94">rent to payer</text><text class="m c-ours" x="960" y="112">by SCOPE</text></g>
+        <path class="e" d="M150,84 H162" marker-end="url(#ah)"/><path class="e" d="M306,84 H318" marker-end="url(#ah)"/><path class="e" d="M462,84 H474" marker-end="url(#ah)"/><path class="e" d="M618,84 H630" marker-end="url(#ah)"/><path class="e" d="M774,84 H786" marker-end="url(#ah)"/><path class="e" d="M930,84 H942" marker-end="url(#ah)"/>
+
+        <path d="M10,142 V152 H774 V142" class="e" style="stroke:var(--payer)"/>
+        <text class="t" x="392" y="178" text-anchor="middle">Payer transaction</text>
+        <text class="s" x="392" y="198" text-anchor="middle">one signature · about 3.0 of 4.1 KB</text>
+        <rect x="292" y="208" width="200" height="6" rx="3" style="fill:var(--slate-bg)"/><rect x="292" y="208" width="146" height="6" rx="3" style="fill:var(--payer)"/>
+        <path d="M790,142 V152 H1086 V142" class="e" style="stroke:var(--recip)"/>
+        <text class="t" x="938" y="178" text-anchor="middle">Recipient transaction</text>
+        <text class="s" x="938" y="198" text-anchor="middle">P and D_owner sign · about 3.3 KB</text>
+        <rect x="838" y="208" width="200" height="6" rx="3" style="fill:var(--slate-bg)"/><rect x="838" y="208" width="161" height="6" rx="3" style="fill:var(--recip)"/>
+      </svg>
+    </div>
+    <figcaption><b>An announcement at <code>["ann", account]</code> means the payment landed; its absence after a sweep means swept and refunded.</b> Rent locked per payment: 4,008,120 lamports at today's rate, all of it returned to the payer. Payer side 2,999 B and recipient core 2,759 B are measured; the full recipient side is estimated.</figcaption>
+  </figure>
+
+  <details>
+    <summary>Every instruction, and what our program checks</summary>
+    <div class="cols">
+      <div><h3>Payer transaction <small>hover to find the state</small></h3>
+        <ol class="ix">
+          <li data-s="1">System CreateAccountWithSeed</li>
+          <li data-s="1">InitializeAccount3, owner = payer</li>
+          <li data-s="2">ConfigureAccount, credit cap 1</li>
+          <li data-s="2">VerifyPubkeyValidity</li>
+          <li data-s="2">DisableNonConfidentialCredits</li>
+          <li data-s="3">SetAuthority CloseAccount → PDA</li>
+          <li data-s="3">SetAuthority AccountOwner → P</li>
+          <li data-s="4" class="ours">announce</li>
+          <li data-s="4">System Transfer payer → P, lamports</li>
+          <li data-s="5">Transfer payer → account</li>
+          <li data-s="5">three proof verifications</li>
+        </ol>
+      </div>
+      <div><h3>Recipient transaction</h3>
+        <ol class="ix">
+          <li data-s="0">Create and configure D, P pays</li>
+          <li data-s="6">ApplyPendingBalance</li>
+          <li data-s="6">Transfer whole balance → D, three proofs</li>
+          <li data-s="6">EmptyAccount</li>
+          <li data-s="6">Burn public dust, only if nonzero</li>
+          <li data-s="7" class="ours">reclaim</li>
+          <li data-s="7">System Transfer, P's remainder → D_owner</li>
+        </ol>
+      </div>
+      <div><h3><code>announce</code> accepts the account only if</h3>
+        <ul class="checks">
+          <li>its address is <code>create_with_seed(payer, R)</code></li>
+          <li>its close authority is the announcement PDA</li>
+          <li>the payer handed it over and left no delegate</li>
+          <li>it takes one confidential credit and no public ones</li>
+        </ul>
+      </div>
+      <div><h3><code>reclaim</code> needs no signer, and</h3>
+        <ul class="checks">
+          <li>finds the announcement at <code>["ann", account]</code> with its stored bump, so a decoy account cannot match</li>
+          <li>refunds only the stored payer</li>
+          <li>leaves the closing to Token-2022, which refuses while any balance remains</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+</section>
+
+<!-- 5 KEYS -->
+<section class="view" id="keys">
+  <div class="vh"><span class="n">5 · Keys</span><h2>Where does the privacy come from?</h2><p>One shared secret per payment, split into independent keys. Color shows who can compute each one.</p></div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1000 540" role="img" aria-label="Key tree. The payer's ephemeral key r and the recipient's scan key give a shared secret S. HKDF splits it into the tweak for the one-time key P, the view tag, and the account's confidential keys. Only the recipient can add b_spend to get the signing scalar p and the destination owner.">
+        <g class="b pub"><rect x="40" y="20" width="300" height="64" rx="8"/></g>
+        <text class="t" x="58" y="48">Recipient meta-address</text><text class="m" x="58" y="70">B_spend, B_scan</text>
+        <g class="b payer"><rect x="660" y="20" width="300" height="64" rx="8"/></g>
+        <text class="t" x="678" y="48">Ephemeral key r</text><text class="s" x="678" y="70">its public key R goes in the announcement</text>
+
+        <g class="b payer"><rect x="330" y="130" width="340" height="60" rx="8"/></g>
+        <text class="t" x="348" y="156">Shared secret S</text><text class="m" x="348" y="176">X25519(r, B_scan) = X25519(b_scan, R)</text>
+        <path class="e" d="M190,84 V160 H322" marker-end="url(#ah)"/><text class="m" x="200" y="124">B_scan</text>
+        <path class="e" d="M810,84 V160 H678" marker-end="url(#ah)"/><text class="m" x="820" y="124">r</text>
+
+        <g class="b payer"><rect x="330" y="226" width="340" height="52" rx="8"/></g>
+        <text class="t" x="348" y="249">PRK</text><text class="m" x="348" y="268">HKDF-SHA256, salt stealth-keygen-v3</text>
+        <path class="e" d="M500,190 V218" marker-end="url(#ah)"/>
+
+        <path class="e" d="M500,278 V302 H180 V322" marker-end="url(#ah)"/>
+        <path class="e" d="M500,278 V322" marker-end="url(#ah)"/>
+        <path class="e" d="M500,302 H820 V322" marker-end="url(#ah)"/>
+
+        <g class="b payer"><rect x="40" y="330" width="280" height="64" rx="8"/></g>
+        <text class="t" x="58" y="356">One-time key P</text><text class="m" x="58" y="378">B_spend + t·G</text>
+        <g class="b payer"><rect x="360" y="330" width="280" height="64" rx="8"/></g>
+        <text class="t" x="378" y="356">View tag, 1 byte</text><text class="s" x="378" y="378">public; scan skips 255 of 256</text>
+        <g class="b payer"><rect x="680" y="330" width="280" height="64" rx="8"/></g>
+        <text class="t" x="698" y="356">Account keys</text><text class="s" x="698" y="378">ElGamal and AES, from ct_ikm</text>
+
+        <path class="e recip" d="M40,52 H20 V470 H32" marker-end="url(#ah-recip)"/>
+        <text class="m c-recip" x="28" y="424">b_spend</text>
+        <path class="e recip" d="M20,470 V526 H500 V512" marker-end="url(#ah-recip)"/>
+        <path class="e" d="M180,394 V432" marker-end="url(#ah)"/>
+        <path class="e" d="M820,394 V432" marker-end="url(#ah)"/>
+
+        <g class="b recip"><rect x="40" y="440" width="280" height="64" rx="8"/></g>
+        <text class="t" x="58" y="466">Signing scalar p</text><text class="s" x="58" y="488">b_spend + t; signs the sweep</text>
+        <g class="b recip open"><rect x="360" y="440" width="280" height="64" rx="8"/></g>
+        <text class="t" x="378" y="466">Destination owner</text><text class="s" x="378" y="488">from b_spend; designed, open (Q14)</text>
+        <g class="b"><rect x="680" y="440" width="280" height="64" rx="8"/></g>
+        <text class="t" x="698" y="466">Receipt</text><text class="s" x="698" y="488">R, ct_ikm, tx: opens one payment</text>
+      </svg>
+    </div>
+    <figcaption><b>Amber: the payer can compute it. Teal: only the recipient. Grey: public.</b> The payer can read the one account it paid, but moving the money needs p, and p needs b_spend, which never touches S. <code>ct_ikm</code> is bound to the chain, program, mint and account, so its keys belong to that one account. Implemented in <code>stealth-keygen</code>; external review pending (Q1).</figcaption>
+  </figure>
+</section>
+
+<!-- 6 CODE -->
+<section class="view" id="code">
+  <div class="vh"><span class="n">6 · Code</span><h2>Where do I make a change?</h2><p>Five crates, three areas of ownership, two contracts between them.</p></div>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 960 330" role="img" aria-label="Crate graph. The CLI depends on scope-client, which depends on stealth-keygen through the ct_ikm export and on scope-interface. The program depends only on scope-interface. The interface and the ct_ikm export are the two contracts.">
+        <g class="b"><rect x="20" y="40" width="210" height="70" rx="8"/></g>
+        <text class="t" x="38" y="70">cli</text><text class="s" x="38" y="92">the scope binary</text>
+        <text class="m" x="20" y="132">all three areas</text>
+
+        <g class="b"><rect x="350" y="40" width="250" height="70" rx="8"/></g>
+        <text class="t" x="368" y="70">crates/client</text><text class="s" x="368" y="92">builders, payer engine, scan</text>
+        <text class="m" x="350" y="132">payer, recipient, receipts</text>
+
+        <g class="b"><rect x="730" y="40" width="210" height="70" rx="8"/></g>
+        <text class="t" x="748" y="70">crates/stealth-keygen</text><text class="s" x="748" y="92">keys, derivation, signing</text>
+        <text class="m" x="730" y="132">crypto and recipient</text>
+
+        <g class="b ours"><rect x="20" y="220" width="210" height="70" rx="8"/></g>
+        <text class="t" x="38" y="250">programs/scope</text><text class="s" x="38" y="272">announce, reclaim</text>
+        <text class="m" x="20" y="312">program and payer</text>
+
+        <g class="b contract"><rect x="350" y="220" width="250" height="70" rx="8"/></g>
+        <text class="t" x="368" y="250">crates/interface</text><text class="s" x="368" y="272">layout, seeds, errors; no deps</text>
+        <text class="m c-ours" x="350" y="312">contract</text>
+
+        <path class="e" d="M230,75 H342" marker-end="url(#ah)"/>
+        <path class="e contract" d="M600,75 H722" marker-end="url(#ah-ours)"/>
+        <text class="lab c-ours" x="661" y="64" text-anchor="middle">ct_ikm · contract</text>
+        <path class="e" d="M475,110 V212" marker-end="url(#ah)"/>
+        <path class="e" d="M230,255 H342" marker-end="url(#ah)"/>
+      </svg>
+    </div>
+    <figcaption><b>Arrows point to what a crate depends on.</b> The program and the client meet only in <code>crates/interface</code>. A change to it, or to the <code>ct_ikm</code> export, needs approval from every area that uses it. Owners per area: docs/plan.md.</figcaption>
+  </figure>
+</section>
+
+<footer>
+  <span>Reflects the program redesign decided 2026-09-30 (no index k, 68-byte announcement, <code>reclaim</code> bound by the PDA) and the key schedule merged in PR #1. Sources: docs/brief.md, design.md, client.md, crypto.md, privacy.md, plan.md.</span>
+  <span>Whiteboard version: <code>docs/architecture/scope-architecture.excalidraw</code>.</span>
+</footer>
+</div>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+
+  const links = [...document.querySelectorAll('nav.rail a')];
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.hash === '#' + e.target.id));
+  }), { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('section.view').forEach(s => io.observe(s));
+
+  // Payroll: steps drive the ledger, the toggle picks whose eyes
+  const steps = [
+    { t: 'Register', c: [['built', 'plain'], ['designed', 'stealth']], b: 'Plain employees give their confidential account. Stealth employees give one meta-address, once, off chain. Nothing touches the chain yet.' },
+    { t: 'Pay', c: [['built', 'plain'], ['designed', 'stealth']], b: 'scope pay checks every account first, shuffles the order and sends one transaction per employee. A run killed halfway resumes without paying anyone twice.' },
+    { t: 'Scan', c: [['planned', 'planned']], b: 'Each stealth employee pulls the announcements that carry their one-byte view tag and recognizes their own. Nothing new lands on chain.' },
+    { t: 'Sweep', c: [['planned', 'planned']], b: 'Ben moves the whole payment to a fresh account in one transaction. The one-time account closes and its rent, 4,008,120 lamports, returns to the company.' },
+    { t: 'Verify', c: [['planned', 'planned']], b: 'Ben hands the auditor a receipt. It opens exactly one payment: the auditor checks it against the chain and reads that amount, nothing else.' },
+  ];
+  const rows = [
+    { at: 2, from: 'ACME Treasury', to: '8fKa…Q2', kind: 'plain', who: 'Ana', amt: '4,200.00', ct: '9f3c a01e…' },
+    { at: 2, from: 'ACME Treasury', to: '3JwX…m7', kind: 'stealth', who: 'Ben', amt: '3,850.00', ct: '41d0 8ce2…' },
+    { at: 2, from: 'ACME Treasury', to: 'Hq4P…cc', kind: 'stealth', who: 'Chioma', amt: '5,100.00', ct: 'e27a 13c9…' },
+    { at: 2, from: 'ACME Treasury', to: '2mNd…Tz', kind: 'plain', who: 'Dev', amt: '3,600.00', ct: '5b88 c0a1…' },
+    { at: 4, from: '3JwX…m7', to: '9Lre…Aa', kind: 'sweep', who: 'Ben', amt: '3,850.00', ct: 'a4f1 2d7e…' },
+  ];
+  const notes = {
+    public: 'The payer is plain to see. Ana and Dev are linkable by address, never by amount. The stealth rows tie to no one.',
+    payer: 'The company knows who it paid and how much. It sees Ben sweep to 9Lre…Aa but can neither read nor move what lands there.',
+    ben: 'Ben sees his own payment and his sweep. Every other row stays ciphertext.',
+    audit: 'With Ben\'s receipt the auditor reads one amount. Everything else stays ciphertext.',
+  };
+  let step = 5, view = 'public', timer = null, shown = 0;
+
+  steps.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<button type="button" aria-label="Step ' + (i + 1) + ': ' + s.t + '">' + (i + 1) + '</button><span>' + s.t + '</span>';
+    li.querySelector('button').addEventListener('click', () => { stop(); go(i + 1); });
+    $('track').appendChild(li);
+  });
+
+  function amount(r, i) {
+    const ct = '<span class="ct">' + r.ct + '</span>';
+    const clear = '<span class="clear">' + r.amt + '</span>';
+    if (view === 'payer') return r.kind === 'sweep' ? ct : clear;
+    if (view === 'ben' && r.who === 'Ben') return clear;
+    if (view === 'audit' && i === 1 && step >= 5) return clear;
+    return ct;
+  }
+  function to(r) {
+    let name = '';
+    if (view === 'payer' && r.kind !== 'sweep') name = ' · ' + r.who;
+    if (view === 'ben' && r.who === 'Ben') name = r.kind === 'sweep' ? ' · your fresh account' : ' · you' + (step >= 3 ? ', found by scan' : '');
+    const tag = r.kind === 'plain' ? '<span class="tag link">same address every month</span>'
+      : r.kind === 'stealth' ? '<span class="tag safe">one-time account</span>'
+      : '<span class="tag">rent back to ACME Treasury</span>';
+    return r.to + name + tag;
+  }
+  function render() {
+    const vis = rows.filter(r => r.at <= step);
+    $('ledger').innerHTML = vis.length
+      ? vis.map((r, i) => '<tr' + (i >= shown && !reduce ? ' class="new"' : '') + '><td>' + r.from + '</td><td>' + to(r) + '</td><td class="amt">' + amount(r, i) + '</td></tr>').join('')
+      : '<tr><td colspan="3" class="empty">Nothing on chain yet.</td></tr>';
+    shown = vis.length;
+    $('viewnote').textContent = notes[view];
+  }
+  function go(n) {
+    if (n < step) shown = 0;
+    step = n;
+    const s = steps[n - 1];
+    [...$('track').children].forEach((li, i) => { li.classList.toggle('cur', i === n - 1); li.classList.toggle('done', i < n - 1); li.querySelector('button').toggleAttribute('aria-current', i === n - 1); });
+    $('sTitle').textContent = n + '. ' + s.t;
+    $('sChips').innerHTML = s.c.map(([k, l]) => '<span class="chip ' + k + '">' + l + '</span>').join(' ');
+    $('sBody').textContent = s.b;
+    render();
+  }
+  function stop() { clearInterval(timer); timer = null; $('play').textContent = 'Play from the start'; }
+  $('play').addEventListener('click', () => {
+    if (timer) return stop();
+    shown = 0; step = 0; go(1); $('play').textContent = 'Pause';
+    timer = setInterval(() => step < 5 ? go(step + 1) : stop(), 3600);
+  });
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    view = b.dataset.view;
+    document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+  }));
+  shown = rows.length; go(5);
+
+  // Instruction list highlights its state
+  const states = [...document.querySelectorAll('.sm .st')];
+  document.querySelectorAll('ol.ix li').forEach(li => {
+    li.tabIndex = 0;
+    const on = () => states.forEach(s => s.classList.toggle('hl', s.dataset.s === li.dataset.s));
+    const off = () => states.forEach(s => s.classList.remove('hl'));
+    li.addEventListener('mouseenter', on); li.addEventListener('focus', on);
+    li.addEventListener('mouseleave', off); li.addEventListener('blur', off);
+  });
+})();
+</script>
+</body>
+</html>
