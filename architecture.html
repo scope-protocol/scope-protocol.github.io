@@ -111,14 +111,29 @@ svg .zt { font-family: var(--f-mono); font-size: 11px; font-weight: 600; letter-
 .aside b { color: var(--ink); font-weight: 600; }
 
 /* payroll */
-.track { list-style: none; margin: 0; padding: 24px 24px 8px; display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
-.track::before { content: ""; position: absolute; left: calc(24px + 10%); right: calc(24px + 10%); top: 45px; height: 2px; background: var(--rule); }
-.track li { display: grid; justify-items: center; gap: 8px; position: relative; }
-.track button { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--rule); background: var(--plate); color: var(--muted); font: 600 15px var(--f-mono); cursor: pointer; transition: background 0.25s, border-color 0.25s, color 0.25s; }
-.track li.done button { border-color: var(--ink); color: var(--ink); }
-.track li.cur button { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-.track span { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
-.track li.cur span, .track li.done span { color: var(--ink); }
+.stepper { display: grid; grid-template-columns: repeat(5, minmax(128px, 1fr)); border-bottom: 1px solid var(--rule); overflow-x: auto; }
+.stepper button { position: relative; display: grid; gap: 2px; text-align: left; padding: 16px 18px 12px; background: transparent; border: 0; border-right: 1px solid var(--rule); color: var(--muted); font: inherit; cursor: pointer; }
+.stepper button:last-child { border-right: 0; }
+.stepper button:hover { background: var(--paper); }
+.stepper small { font: 500 10.5px var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.stepper b { font: 600 1.0625rem var(--f-display); }
+.stepper i { position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--rule); overflow: hidden; }
+.stepper i::after { content: ""; position: absolute; inset: 0; background: var(--payer); transform-origin: left; transform: scaleX(0); }
+.stepper button.done, .stepper button.cur { color: var(--ink); }
+.stepper button.done i::after, .stepper button.cur i::after { transform: scaleX(1); }
+.stepper button.cur { background: color-mix(in srgb, var(--payer-bg) 55%, transparent); }
+.stepper.run button.cur i::after { animation: fill 3.6s linear both; }
+@keyframes fill { from { transform: scaleX(0); } }
+.stage [data-from], .stage [data-to] { transition: opacity 0.45s ease; }
+.stage .off { opacity: 0; }
+.e.thin { stroke-width: 2.5; }
+.pill rect { fill: var(--ours-bg); stroke: var(--ours); stroke-width: 1.5; }
+.pill text { font: 600 10.5px var(--f-mono); fill: var(--ours); }
+.num circle { fill: var(--ink); }
+.num text { font: 600 12px var(--f-mono); fill: var(--paper); text-anchor: middle; }
+.flowsteps { list-style: none; margin: 0; padding: 16px 24px 20px; border-top: 1px solid var(--rule); display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 32px; counter-reset: f; font-size: 0.9375rem; }
+.flowsteps li { counter-increment: f; display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: baseline; }
+.flowsteps li::before { content: counter(f); width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--paper); font: 600 11px/22px var(--f-mono); text-align: center; }
 .stepcard { display: grid; gap: 6px; padding: 16px 24px 20px; min-height: 118px; }
 .stepcard h3 { font-size: 1.25rem; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .chip { font: 600 10.5px/1 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 999px; border: 1.5px solid var(--ink); white-space: nowrap; }
@@ -171,13 +186,12 @@ ul.checks { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 
 footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); display: grid; gap: 6px; font-size: 0.8125rem; color: var(--muted); }
 
 @media (max-width: 640px) {
-  .track { padding-inline: 8px; } .track::before { left: 10%; right: 10%; }
-  .track span { font-size: 0.75rem; }
   th, td { padding-inline: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .flow, tr.new td { animation: none; }
-  .track button, .sm .st rect { transition: none; }
+  .sm .st rect, .stage [data-from], .stage [data-to] { transition: none; }
+  .stepper.run button.cur i::after { animation: none; }
 }
 </style>
 
@@ -219,59 +233,142 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
 
 <!-- 1 OVERVIEW -->
 <section class="view" id="overview">
-  <div class="vh"><span class="n">1 · Overview</span><h2>What is SCOPE?</h2><p>A payout rail where the payer is public and the payments are not.</p></div>
+  <div class="vh"><span class="n">1 · Overview</span><h2>How it works, end to end</h2><p>One payment from a visible payer to a stealth recipient: two transactions, one account in between, rent back at the end.</p></div>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 960 360" role="img" aria-label="A company pays a plain and a stealth recipient through the Solana ledger. A public observer reads the ledger and sees the payer and encrypted amounts. An auditor reads only what it is given.">
-        <g class="b payer"><rect x="20" y="140" width="190" height="80" rx="8"/></g>
-        <text class="t" x="40" y="174">Company</text><text class="s" x="40" y="196">the payer, visible</text>
+      <svg viewBox="0 0 1100 450" role="img" aria-label="End-to-end flow. The recipient gives the payer a meta-address off chain. One payer transaction creates a one-time account owned by the recipient's key, announces it and pays in. The recipient scans announcements, then sweeps the balance to a fresh account. Our program returns the rent to the payer. An auditor reads one payment with a receipt.">
+        <rect class="zone payer" x="20" y="80" width="210" height="280" rx="12"/>
+        <text class="zt c-payer" x="38" y="106">Payer</text>
+        <g class="b payer"><rect x="40" y="180" width="170" height="80" rx="8"/></g>
+        <text class="t" x="58" y="214">Company</text><text class="s" x="58" y="236">scope pay</text>
 
-        <g class="b pub"><rect x="330" y="120" width="300" height="120" rx="8"/></g>
-        <text class="zt c-slate" x="350" y="148">Solana ledger</text>
-        <text class="lab" x="350" y="184">ACME → 8fKa…Q2</text><text class="lab c-slate" x="610" y="184" text-anchor="end">▒▒▒▒▒</text>
-        <text class="lab" x="350" y="212">ACME → 3JwX…m7</text><text class="lab c-slate" x="610" y="212" text-anchor="end">▒▒▒▒▒</text>
+        <rect class="zone pub" x="290" y="80" width="520" height="280" rx="12"/>
+        <text class="zt c-slate" x="308" y="106">Solana</text>
+        <g class="b recip"><rect x="330" y="150" width="190" height="100" rx="8"/></g>
+        <text class="t" x="346" y="180">One-time account</text><text class="s" x="346" y="202">owner P, the recipient's key</text><text class="lab c-slate" x="346" y="232">▒▒▒▒▒ encrypted</text>
+        <g class="b ours"><rect x="330" y="280" width="190" height="60" rx="8"/></g>
+        <text class="t" x="346" y="306">Announcement</text><text class="s" x="346" y="326">68 B: R, view tag, payer</text>
+        <g class="b recip"><rect x="600" y="150" width="180" height="100" rx="8"/></g>
+        <text class="t" x="616" y="180">Fresh account D</text><text class="s" x="616" y="202">the recipient's own</text><text class="lab c-slate" x="616" y="232">▒▒▒▒▒ encrypted</text>
+        <text class="lab c-ours" x="665" y="350" text-anchor="middle">money moves only through Token-2022</text>
 
-        <g class="b recip"><rect x="760" y="70" width="180" height="80" rx="8"/></g>
-        <text class="t" x="780" y="104">Plain recipient</text><text class="s" x="780" y="126">fixed account</text>
-        <g class="b recip"><rect x="760" y="210" width="180" height="80" rx="8"/></g>
-        <text class="t" x="780" y="244">Stealth recipient</text><text class="s" x="780" y="266">fresh account each time</text>
+        <rect class="zone recip" x="870" y="80" width="210" height="280" rx="12"/>
+        <text class="zt c-recip" x="888" y="106">Recipient</text>
+        <g class="b recip"><rect x="890" y="180" width="170" height="80" rx="8"/></g>
+        <text class="t" x="908" y="214">Stealth recipient</text><text class="s" x="908" y="236">scope scan, sweep</text>
 
-        <path class="e funds" d="M210,180 H322" marker-end="url(#ah-funds)"/>
-        <text class="lab c-payer" x="266" y="168" text-anchor="middle">pays</text>
-        <path class="e recip" d="M630,160 L752,118" marker-end="url(#ah-recip)"/>
-        <path class="e recip" d="M630,200 L752,242" marker-end="url(#ah-recip)"/>
+        <g class="b"><rect x="590" y="386" width="200" height="50" rx="8"/></g>
+        <text class="t" x="690" y="416" text-anchor="middle">Auditor</text>
 
-        <g class="b"><rect x="380" y="10" width="200" height="54" rx="8"/></g>
-        <text class="t" x="480" y="42" text-anchor="middle">Public observer</text>
-        <path class="e read" d="M480,64 V114" marker-end="url(#ah)"/>
-        <text class="m" x="490" y="94">reads everything</text>
+        <path class="e recip read" d="M975,180 V40 H125 V172" marker-end="url(#ah-recip)"/>
+        <path class="e funds flow" d="M210,200 H322" marker-end="url(#ah-funds)"/>
+        <path class="e ours" d="M240,200 V310 H322" marker-end="url(#ah-ours)"/>
+        <path class="e recip read" d="M890,240 H850 V310 H528" marker-end="url(#ah-recip)"/>
+        <path class="e funds flow" d="M520,200 H592" marker-end="url(#ah-funds)"/>
+        <path class="e recip" d="M890,200 H788" marker-end="url(#ah-recip)"/>
+        <path class="e rent" d="M425,340 V396 H125 V268" marker-end="url(#ah-rent)"/>
+        <path class="e recip read" d="M975,260 V411 H798" marker-end="url(#ah-recip)"/>
+        <path class="e read" d="M690,386 V366" marker-end="url(#ah)"/>
 
-        <g class="b"><rect x="380" y="296" width="200" height="54" rx="8"/></g>
-        <text class="t" x="480" y="328" text-anchor="middle">Auditor</text>
-        <path class="e read" d="M480,296 V246" marker-end="url(#ah)"/>
-        <text class="m" x="490" y="276">reads what it is given</text>
+        <g class="num"><circle cx="550" cy="40" r="12"/><text x="550" y="44">1</text></g>
+        <g class="num"><circle cx="270" cy="182" r="12"/><text x="270" y="186">2</text></g>
+        <g class="num"><circle cx="700" cy="310" r="12"/><text x="700" y="314">3</text></g>
+        <g class="num"><circle cx="556" cy="182" r="12"/><text x="556" y="186">4</text></g>
+        <g class="num"><circle cx="280" cy="396" r="12"/><text x="280" y="400">5</text></g>
+        <g class="num"><circle cx="880" cy="411" r="12"/><text x="880" y="415">6</text></g>
       </svg>
     </div>
+    <ol class="flowsteps">
+      <li>The recipient hands the payer a meta-address, once, off chain.</li>
+      <li>One payer transaction creates the one-time account, hands it to the recipient's key P, announces it and pays in.</li>
+      <li>The recipient scans announcements by view tag and finds the payment.</li>
+      <li>One recipient transaction moves the whole balance to a fresh account D.</li>
+      <li>Our program closes the one-time account and returns its rent to the payer.</li>
+      <li>A receipt lets an auditor read that one payment, nothing else.</li>
+    </ol>
   </figure>
   <div class="promises">
     <div class="promise"><small>Hidden</small><b>Every amount</b><p>Transfers are Token-2022 confidential transfers: the ledger holds ciphertext.</p></div>
     <div class="promise"><small>Hidden</small><b>Who a stealth recipient is</b><p>Each payment lands in a fresh account that only the recipient's scan key recognizes.</p></div>
     <div class="promise vis"><small>Visible on purpose</small><b>The payer</b><p>No pool, no relayer, no mixer. Amounts stay recoverable by receipt or the mint's auditor key.</p></div>
   </div>
-  <p class="aside"><b>Not claimed:</b> privacy from the payer, privacy for the payer, anonymity. Merging several payments into one account links them again.</p>
+  <p class="aside"><b>Not claimed:</b> privacy from the payer, privacy for the payer, anonymity. A plain recipient skips steps 1 and 3 to 5: the payer transfers straight to their fixed confidential account.</p>
 </section>
 
 <!-- 2 PAYROLL -->
 <section class="view" id="payroll">
-  <div class="vh"><span class="n">2 · Use case</span><h2>Confidential payroll</h2><p>How a company pays salaries without publishing them, and what each party sees.</p></div>
+  <div class="vh"><span class="n">2 · Use case</span><h2>Confidential payroll</h2><p>ACME pays four employees, two plain and two stealth. Pick a step, or play the run.</p></div>
   <figure id="player">
-    <ol class="track" id="track"></ol>
+    <div class="stepper" id="stepper" role="group" aria-label="Steps"></div>
+    <div class="scroll">
+      <svg class="stage" id="stage" viewBox="0 -40 1100 480" role="img" aria-label="Payroll stage: the company on the left, the Solana ledger with one row per employee in the middle, the employees and an auditor on the right. Each step shows what moves between them.">
+        <g class="b payer"><rect x="20" y="150" width="180" height="100" rx="8"/></g>
+        <text class="t" x="38" y="184">ACME Treasury</text><text class="s" x="38" y="206">the payer</text><text class="m" x="38" y="228">scope pay</text>
+
+        <rect class="zone pub" x="270" y="20" width="510" height="340" rx="12"/>
+        <text class="zt c-slate" x="288" y="46">Solana</text>
+
+        <g class="b"><rect x="300" y="60" width="250" height="56" rx="7"/></g>
+        <text class="lab" x="316" y="84">8fKa…Q2</text><text class="s" x="316" y="104">Ana's account, same every month</text>
+        <text class="lab c-slate" data-from="2" x="534" y="84" text-anchor="end">▒▒▒▒</text>
+
+        <g data-to="1"><g class="b open"><rect x="300" y="130" width="250" height="56" rx="7"/></g><text class="s" x="316" y="163">one-time account, not created yet</text></g>
+        <g data-from="2" data-to="3"><g class="b recip"><rect x="300" y="130" width="250" height="56" rx="7"/></g><text class="lab" x="316" y="154">3JwX…m7</text><text class="s" x="316" y="174">one-time, owner P</text><text class="lab c-slate" x="490" y="154" text-anchor="end">▒▒▒▒</text><g class="pill"><rect x="498" y="146" width="44" height="20" rx="10"/><text x="520" y="160" text-anchor="middle">ann</text></g></g>
+        <g data-from="4"><g class="b open"><rect x="300" y="130" width="250" height="56" rx="7"/></g><text class="lab c-slate" x="316" y="154" text-decoration="line-through">3JwX…m7</text><text class="s" x="316" y="174">closed, rent refunded</text></g>
+
+        <g data-to="1"><g class="b open"><rect x="300" y="200" width="250" height="56" rx="7"/></g><text class="s" x="316" y="233">one-time account, not created yet</text></g>
+        <g data-from="2"><g class="b recip"><rect x="300" y="200" width="250" height="56" rx="7"/></g><text class="lab" x="316" y="224">Hq4P…cc</text><text class="s" x="316" y="244">one-time, owner P</text><text class="lab c-slate" x="490" y="224" text-anchor="end">▒▒▒▒</text><g class="pill"><rect x="498" y="216" width="44" height="20" rx="10"/><text x="520" y="230" text-anchor="middle">ann</text></g></g>
+
+        <g class="b"><rect x="300" y="270" width="250" height="56" rx="7"/></g>
+        <text class="lab" x="316" y="294">2mNd…Tz</text><text class="s" x="316" y="314">Dev's account, same every month</text>
+        <text class="lab c-slate" data-from="2" x="534" y="294" text-anchor="end">▒▒▒▒</text>
+
+        <g data-from="4"><g class="b recip"><rect x="610" y="130" width="150" height="56" rx="7"/></g><text class="lab" x="626" y="154">9Lre…Aa</text><text class="s" x="626" y="174">Ben's fresh account</text></g>
+
+        <g class="b recip"><rect x="850" y="60" width="200" height="56" rx="7"/></g><text class="t" x="866" y="84">Ana</text><text class="s" x="866" y="104">plain</text>
+        <g class="b recip"><rect x="850" y="130" width="200" height="56" rx="7"/></g><text class="t" x="866" y="154">Ben</text><text class="s" x="866" y="174">stealth</text>
+        <g class="b recip"><rect x="850" y="200" width="200" height="56" rx="7"/></g><text class="t" x="866" y="224">Chioma</text><text class="s" x="866" y="244">stealth</text>
+        <g class="b recip"><rect x="850" y="270" width="200" height="56" rx="7"/></g><text class="t" x="866" y="294">Dev</text><text class="s" x="866" y="314">plain</text>
+        <g class="b"><rect x="850" y="376" width="200" height="48" rx="7"/></g><text class="t" x="950" y="405" text-anchor="middle">Auditor</text>
+
+        <g data-from="1" data-to="1">
+          <path class="e recip read" d="M950,60 V-12 H110 V142" marker-end="url(#ah-recip)"/>
+          <text class="lab c-recip" x="530" y="-20" text-anchor="middle">accounts and meta-addresses, off chain</text>
+        </g>
+        <g data-from="2" data-to="2">
+          <path class="e funds thin flow" d="M200,200 C250,200 250,88 292,88" marker-end="url(#ah-funds)"/>
+          <path class="e funds thin flow" d="M200,200 C250,200 250,158 292,158" marker-end="url(#ah-funds)"/>
+          <path class="e funds thin flow" d="M200,200 C250,200 250,228 292,228" marker-end="url(#ah-funds)"/>
+          <path class="e funds thin flow" d="M200,200 C250,200 250,298 292,298" marker-end="url(#ah-funds)"/>
+          <text class="lab c-payer" x="110" y="276" text-anchor="middle">4 transactions</text>
+        </g>
+        <g data-from="3" data-to="3">
+          <path class="e recip read" d="M850,158 H550" marker-end="url(#ah-recip)"/>
+          <path class="e recip read" d="M850,228 H550" marker-end="url(#ah-recip)"/>
+          <text class="lab c-recip" x="700" y="150" text-anchor="middle">view tag matches</text>
+          <text class="lab c-recip" x="700" y="220" text-anchor="middle">view tag matches</text>
+        </g>
+        <g data-from="4" data-to="4">
+          <path class="e funds flow" d="M550,158 H602" marker-end="url(#ah-funds)"/>
+          <path class="e recip" d="M850,158 H768" marker-end="url(#ah-recip)"/>
+          <text class="lab c-recip" x="809" y="150" text-anchor="middle">signs</text>
+          <path class="e rent" d="M300,176 H240 V232 H208" marker-end="url(#ah-rent)"/>
+          <text class="lab c-rent" x="110" y="276" text-anchor="middle">rent back</text>
+        </g>
+        <g data-from="5" data-to="5">
+          <path class="e recip read" d="M1050,158 H1080 V400 H1058" marker-end="url(#ah-recip)"/>
+          <text class="lab c-recip" x="1072" y="356" text-anchor="end">receipt</text>
+          <path class="e read" d="M850,400 H580 V166 H558" marker-end="url(#ah)"/>
+          <text class="lab" x="715" y="392" text-anchor="middle">reads 3,850.00</text>
+        </g>
+      </svg>
+    </div>
     <div class="stepcard" aria-live="polite">
       <h3><span id="sTitle"></span><span id="sChips"></span></h3>
       <p id="sBody"></p>
     </div>
     <div class="bar">
-      <button type="button" class="act" id="play">Play from the start</button>
+      <button type="button" class="act" id="play">Play the run</button>
       <div><span class="seglab">Seen by</span><span class="seg" role="group" aria-label="Seen by">
         <button type="button" data-view="public" aria-pressed="true">Explorer</button>
         <button type="button" data-view="payer" aria-pressed="false">Company</button>
@@ -526,11 +623,11 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
 
   // Payroll: steps drive the ledger, the toggle picks whose eyes
   const steps = [
-    { t: 'Register', c: [['built', 'plain'], ['designed', 'stealth']], b: 'Plain employees give their confidential account. Stealth employees give one meta-address, once, off chain. Nothing touches the chain yet.' },
-    { t: 'Pay', c: [['built', 'plain'], ['designed', 'stealth']], b: 'scope pay checks every account first, shuffles the order and sends one transaction per employee. A run killed halfway resumes without paying anyone twice.' },
-    { t: 'Scan', c: [['planned', 'planned']], b: 'Each stealth employee pulls the announcements that carry their one-byte view tag and recognizes their own. Nothing new lands on chain.' },
-    { t: 'Sweep', c: [['planned', 'planned']], b: 'Ben moves the whole payment to a fresh account in one transaction. The one-time account closes and its rent, 4,008,120 lamports, returns to the company.' },
-    { t: 'Verify', c: [['planned', 'planned']], b: 'Ben hands the auditor a receipt. It opens exactly one payment: the auditor checks it against the chain and reads that amount, nothing else.' },
+    { t: 'Register', sub: 'off chain', c: [['built', 'plain'], ['designed', 'stealth']], b: 'Plain employees give their confidential account. Stealth employees give one meta-address, once, off chain. Nothing touches the chain yet.' },
+    { t: 'Pay', sub: '4 transactions', c: [['built', 'plain'], ['designed', 'stealth']], b: 'scope pay checks every account first, shuffles the order and sends one transaction per employee. A run killed halfway resumes without paying anyone twice.' },
+    { t: 'Scan', sub: 'read only', c: [['planned', 'planned']], b: 'Each stealth employee pulls the announcements that carry their one-byte view tag and recognizes their own. Nothing new lands on chain.' },
+    { t: 'Sweep', sub: '1 transaction', c: [['planned', 'planned']], b: 'Ben moves the whole payment to a fresh account in one transaction. The one-time account closes and its rent, 4,008,120 lamports, returns to the company.' },
+    { t: 'Verify', sub: 'one receipt', c: [['planned', 'planned']], b: 'Ben hands the auditor a receipt. It opens exactly one payment: the auditor checks it against the chain and reads that amount, nothing else.' },
   ];
   const rows = [
     { at: 2, from: 'ACME Treasury', to: '8fKa…Q2', kind: 'plain', who: 'Ana', amt: '4,200.00', ct: '9f3c a01e…' },
@@ -545,13 +642,15 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
     ben: 'Ben sees his own payment and his sweep. Every other row stays ciphertext.',
     audit: 'With Ben\'s receipt the auditor reads one amount. Everything else stays ciphertext.',
   };
-  let step = 5, view = 'public', timer = null, shown = 0;
+  let step = 5, view = 'public', timer = null, shown = 0, playing = false;
+  const stepper = $('stepper'), staged = [...document.querySelectorAll('#stage [data-from], #stage [data-to]')];
 
   steps.forEach((s, i) => {
-    const li = document.createElement('li');
-    li.innerHTML = '<button type="button" aria-label="Step ' + (i + 1) + ': ' + s.t + '">' + (i + 1) + '</button><span>' + s.t + '</span>';
-    li.querySelector('button').addEventListener('click', () => { stop(); go(i + 1); });
-    $('track').appendChild(li);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<i></i><small>Step ' + (i + 1) + ' · ' + s.sub + '</small><b>' + s.t + '</b>';
+    b.addEventListener('click', () => { stop(); go(i + 1); });
+    stepper.appendChild(b);
   });
 
   function amount(r, i) {
@@ -583,16 +682,19 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
     if (n < step) shown = 0;
     step = n;
     const s = steps[n - 1];
-    [...$('track').children].forEach((li, i) => { li.classList.toggle('cur', i === n - 1); li.classList.toggle('done', i < n - 1); li.querySelector('button').toggleAttribute('aria-current', i === n - 1); });
+    [...stepper.children].forEach((b, i) => { b.classList.toggle('cur', i === n - 1); b.classList.toggle('done', i < n - 1); b.toggleAttribute('aria-current', i === n - 1); });
+    stepper.classList.remove('run'); void stepper.offsetWidth;
+    if (playing && !reduce) stepper.classList.add('run');
+    staged.forEach(el => { const f = +(el.dataset.from || 1), t = +(el.dataset.to || 9); el.classList.toggle('off', n < f || n > t); });
     $('sTitle').textContent = n + '. ' + s.t;
     $('sChips').innerHTML = s.c.map(([k, l]) => '<span class="chip ' + k + '">' + l + '</span>').join(' ');
     $('sBody').textContent = s.b;
     render();
   }
-  function stop() { clearInterval(timer); timer = null; $('play').textContent = 'Play from the start'; }
+  function stop() { clearInterval(timer); timer = null; playing = false; stepper.classList.remove('run'); $('play').textContent = 'Play the run'; }
   $('play').addEventListener('click', () => {
     if (timer) return stop();
-    shown = 0; step = 0; go(1); $('play').textContent = 'Pause';
+    playing = true; shown = 0; step = 0; go(1); $('play').textContent = 'Pause';
     timer = setInterval(() => step < 5 ? go(step + 1) : stop(), 3600);
   });
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
