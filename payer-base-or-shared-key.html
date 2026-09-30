@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>Payer Base or Shared Key</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --panel: #eaeef4;
+  --ink: #142030;
+  --muted: #56657a;
+  --line: #c9d2de;
+  --a: #1f6aa8;
+  --a-soft: #e1edf8;
+  --b: #7a45b0;
+  --b-soft: #efe6f8;
+  --same: #4d5d72;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e141c;
+    --surface: #151d28;
+    --panel: #121a24;
+    --ink: #e2e8f0;
+    --muted: #93a1b5;
+    --line: #2c394a;
+    --a: #6fb2ec;
+    --a-soft: #13283b;
+    --b: #c29af0;
+    --b-soft: #271a38;
+    --same: #9aabc2;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e141c;
+  --surface: #151d28;
+  --panel: #121a24;
+  --ink: #e2e8f0;
+  --muted: #93a1b5;
+  --line: #2c394a;
+  --a: #6fb2ec;
+  --a-soft: #13283b;
+  --b: #c29af0;
+  --b-soft: #271a38;
+  --same: #9aabc2;
+}
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); padding-inline: 20px; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 52px; }
+header { display: grid; gap: 14px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(32px, 5vw, 48px)/1.05 var(--display); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+h2 { font: 600 23px/1.2 var(--display); margin: 0; text-wrap: balance; }
+h3 { font: 600 16px/1.3 var(--body); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17px; color: var(--muted); }
+code { font: 13px var(--mono); background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+section { display: grid; gap: 16px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 72ch; }
+
+.defs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.def { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 2px; }
+.def b { font: 500 14px var(--mono); }
+.def span { font-size: 13.5px; color: var(--muted); }
+
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.opt { border-radius: 14px; padding: 18px; display: grid; gap: 10px; align-content: start; border: 1.5px solid var(--c); background: var(--cs); }
+.opt .tag { font: 600 12px var(--mono); letter-spacing: .08em; color: var(--c); }
+.opt pre { margin: 0; font: 13px/1.6 var(--mono); white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.opt p { font-size: 14.5px; }
+
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.scroll { overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 720px; height: auto; }
+figcaption { font-size: 14px; color: var(--muted); max-width: 80ch; }
+
+.pnl { fill: var(--panel); }
+.pnl-lbl { font: 500 11px var(--mono); letter-spacing: .08em; }
+.bx { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.bx-a { fill: var(--a-soft); stroke: var(--a); stroke-width: 1.5; }
+.bx-b { fill: var(--b-soft); stroke: var(--b); stroke-width: 1.5; }
+.t-name { font: 600 13.5px var(--body); fill: var(--ink); }
+.t-sub { font: 11.5px var(--mono); fill: var(--muted); }
+.t-lbl { font: 11.5px var(--mono); fill: var(--ink); }
+.fa { fill: var(--a); }
+.fb { fill: var(--b); }
+.ln { fill: none; stroke-width: 1.6; }
+.la { stroke: var(--a); }
+.lb { stroke: var(--b); }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 680px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { font: 500 11.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+thead th.ca { color: var(--a); }
+thead th.cb { color: var(--b); }
+tbody th { font-weight: 600; width: 22%; }
+td.m { color: var(--muted); width: 30%; }
+tr:last-child td, tr:last-child th { border-bottom: 0; }
+.num { font-variant-numeric: tabular-nums; }
+
+.fit { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.fit div { border-left: 3px solid var(--c); padding: 4px 0 4px 14px; display: grid; gap: 8px; }
+.fit h3 { color: var(--c); }
+
+.ask { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 8px; }
+.ask p.q { font: 600 20px/1.35 var(--display); max-width: 60ch; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">SCOPE · design choice · stealth payments</div>
+    <h1>Who creates the one-time account?</h1>
+    <p class="lede">Each stealth payment lands in a fresh token account. Whoever can create that account first controls how it is set up, so only the right party should be able to. There are two sound ways to do it. This page lays them side by side, with no pick.</p>
+  </header>
+
+  <section>
+    <h2>Terms</h2>
+    <div class="defs">
+      <div class="def"><b>E</b><span>payer's one-time public key for a payment, published in the announcement. Also called R.</span></div>
+      <div class="def"><b>S</b><span>shared secret. The payer computes it from its secret for E, the recipient from E and its scan key. Nobody else can.</span></div>
+      <div class="def"><b>P</b><span>one-time owner key. Only the recipient can sign as P.</span></div>
+      <div class="def"><b>Announcement</b><span>small on-chain record the recipient scans for by its 1-byte tag.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The two options</h2>
+    <div class="pair">
+      <div class="opt" style="--c:var(--a);--cs:var(--a-soft)">
+        <span class="tag">OPTION A · PAYER AS BASE</span>
+        <pre>address = create_with_seed(payer, hash(E))
+creator signs as: payer
+announcement: tag, E, payer</pre>
+        <p>The address comes from the payer's key and E. Creating it needs the payer's signature, so only the payer can.</p>
+      </div>
+      <div class="opt" style="--c:var(--b);--cs:var(--b-soft)">
+        <span class="tag">OPTION B1 · SHARED-SECRET KEY</span>
+        <pre>a = derived from S,  A = a·G
+address = A
+creator signs as: A
+announcement: tag, E, payer</pre>
+        <p>The address is a key both sides derive from S. Creating it needs a signature from <code>a</code>, so only someone who knows S can: the payer or the recipient. A variant, <code>create_with_seed(A, hash(E))</code>, behaves the same.</p>
+      </div>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 960 290" role="img" aria-label="Option A: the recipient needs the payer and E from the announcement to compute the address, and only the payer can sign to create it. Option B1: the recipient needs only E, computes S, then a and A, and anyone who knows S can sign to create it.">
+        <defs>
+          <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="fa"/></marker>
+          <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="fb"/></marker>
+        </defs>
+        <rect class="pnl" x="16" y="16" width="452" height="258" rx="14"/>
+        <rect class="pnl" x="492" y="16" width="452" height="258" rx="14"/>
+        <text class="pnl-lbl fa" x="36" y="44">A · HOW THE ADDRESS IS FOUND AND CREATED</text>
+        <text class="pnl-lbl fb" x="512" y="44">B1 · HOW THE ADDRESS IS FOUND AND CREATED</text>
+
+        <!-- A -->
+        <rect class="bx" x="36" y="64" width="160" height="60" rx="10"/>
+        <text class="t-name" x="52" y="90">Announcement</text>
+        <text class="t-sub" x="52" y="110">tag · E · payer</text>
+        <line class="ln la" x1="198" y1="94" x2="258" y2="94" marker-end="url(#ma)"/>
+        <text class="t-lbl" x="228" y="86" text-anchor="middle">payer+E</text>
+        <rect class="bx-a" x="262" y="64" width="186" height="60" rx="10"/>
+        <text class="t-name" x="278" y="90">create_with_seed</text>
+        <text class="t-sub" x="278" y="110">(payer, hash(E))</text>
+        <line class="ln la" x1="355" y1="126" x2="355" y2="176" marker-end="url(#ma)"/>
+        <text class="t-lbl" x="363" y="156">address</text>
+        <rect class="bx" x="262" y="180" width="186" height="60" rx="10"/>
+        <text class="t-name" x="278" y="206">Token account</text>
+        <text class="t-sub" x="278" y="226">owner: P after handover</text>
+        <rect class="bx-a" x="36" y="180" width="160" height="60" rx="10"/>
+        <text class="t-name" x="52" y="206">Can create it</text>
+        <text class="t-sub" x="52" y="226">payer only</text>
+        <line class="ln la" x1="198" y1="210" x2="258" y2="210" marker-end="url(#ma)"/>
+        <text class="t-lbl" x="228" y="202" text-anchor="middle">signs</text>
+
+        <!-- B1 -->
+        <rect class="bx" x="512" y="64" width="160" height="60" rx="10"/>
+        <text class="t-name" x="528" y="90">Announcement</text>
+        <text class="t-sub" x="528" y="110">tag · E · payer</text>
+        <line class="ln lb" x1="674" y1="94" x2="734" y2="94" marker-end="url(#mb)"/>
+        <text class="t-lbl" x="704" y="86" text-anchor="middle">E only</text>
+        <rect class="bx-b" x="738" y="64" width="186" height="60" rx="10"/>
+        <text class="t-name" x="754" y="90">E → S → a → A</text>
+        <text class="t-sub" x="754" y="110">recipient uses scan key</text>
+        <line class="ln lb" x1="831" y1="126" x2="831" y2="176" marker-end="url(#mb)"/>
+        <text class="t-lbl" x="839" y="156">address = A</text>
+        <rect class="bx" x="738" y="180" width="186" height="60" rx="10"/>
+        <text class="t-name" x="754" y="206">Token account</text>
+        <text class="t-sub" x="754" y="226">owner: P after handover</text>
+        <rect class="bx-b" x="512" y="180" width="160" height="60" rx="10"/>
+        <text class="t-name" x="528" y="206">Can create it</text>
+        <text class="t-sub" x="528" y="226">anyone who knows S</text>
+        <line class="ln lb" x1="674" y1="210" x2="734" y2="210" marker-end="url(#mb)"/>
+        <text class="t-lbl" x="704" y="202" text-anchor="middle">signs</text>
+      </svg>
+      </div>
+      <figcaption>Both block front-running: an outsider can't produce the signature needed to create the account. They differ in what the recipient must know to find it, and in who else, besides the payer, could create it.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>What stays the same</h2>
+    <ul>
+      <li><b>Front-running is blocked.</b> Creating the account needs a signature an outsider can't make.</li>
+      <li><b>Privacy is the same.</b> The payer signs the payment transaction either way, so the payer is public in both.</li>
+      <li><b>The payer gets the rent back.</b> Both keep the payer in the announcement so <code>reclaim</code> knows where to send it.</li>
+      <li><b>Announcement size is the same</b>, about 68 bytes.</li>
+      <li><b>One atomic transaction</b> per side: create, configure, hand over to P, announce, fund, transfer.</li>
+      <li><b>Scanning starts the same way</b>: filter announcements by the 1-byte tag.</li>
+      <li><b>Rent stays locked until the recipient sweeps.</b> That comes with any one-time account.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Where they differ</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th></th><th class="ca">A · payer as base</th><th class="cb">B1 · shared-secret key</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><th>Who can create the account</th><td>payer</td><td>payer or recipient</td><td class="m">A recipient creating it first only blocks their own payment, so this gains an attacker nothing.</td></tr>
+          <tr><th>What the recipient needs to find the account</th><td>E and the payer</td><td>E only</td><td class="m">Matters only if a recipient can hold E without knowing who paid.</td></tr>
+          <tr><th>Tag matches that aren't yours</th><td>rejected after reading the account</td><td>rejected by math, no read</td><td class="m">Two sources: chance (1 in 256 announcements) and copied announcements. In A an outsider can copy a real E into an account of their own with owner P; its encryption key won't match, so it's griefing only, no funds at risk. In B1 a copy can't match A. The real payment is read in both.</td></tr>
+          <tr><th>Program checks that E matches the account</th><td>yes, it recomputes the address</td><td>no, it can only check that the account signed</td><td class="m">In A, announcing a different E than the one the address was built from fails on chain, and nothing is sent. A wrong tag isn't caught in either option.</td></tr>
+          <tr><th>Signatures on the payer's transaction</th><td class="num">1</td><td class="num">2</td><td class="m">B1 costs 5,000 lamports more per payment, not refunded, and 64 more bytes of the 4,096-byte limit.</td></tr>
+          <tr><th>Keys the payer's software signs with</th><td>the payer's wallet</td><td>the wallet plus a key derived from S</td><td class="m">B1 needs a signer built from a raw scalar, since standard keypairs start from a seed. The recipient already needs one to sign as P, so it's new only on the payer side.</td></tr>
+          <tr><th>Address recipe</th><td>seed string from a hash of E</td><td>one more HKDF output from S</td><td class="m">B1 adds one derivation for the crypto review to cover; A adds a seed format both sides must match.</td></tr>
+          <tr><th>Payer finding its own accounts after a crash</th><td>from its own key and E</td><td>from E and the recipient's public keys</td><td class="m">The payer has the recipient list in its input either way.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>When each one fits</h2>
+    <div class="fit">
+      <div style="--c:var(--a)">
+        <h3>A fits when</h3>
+        <ul>
+          <li>recipients always know who paid them, as in payroll or invoices</li>
+          <li>you want the program itself to reject a payment announced with the wrong E</li>
+          <li>one signature per payment and standard wallet signing matter</li>
+        </ul>
+      </div>
+      <div style="--c:var(--b)">
+        <h3>B1 fits when</h3>
+        <ul>
+          <li>a recipient may get E from somewhere that doesn't say who paid</li>
+          <li>scanning should reject non-matching tags without an account read</li>
+          <li>copied announcements should be impossible, not just detectable</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Checks before choosing B1</h2>
+    <ul>
+      <li>A transaction signed with a key derived from a raw scalar verifies on Solana. Expected, since the signature is standard Ed25519, but not yet tested.</li>
+      <li>If someone sends lamports to address A first, plain create fails. The fallback (transfer, allocate, assign) must work when signed by <code>a</code>.</li>
+    </ul>
+    <p>Option A's equivalents are covered: <code>create_with_seed</code> only allocates when the base signs, and the same fallback applies.</p>
+  </section>
+
+  <section class="ask">
+    <span class="eyebrow">The deciding question</span>
+    <p class="q">Will a recipient ever have E for a payment without knowing who paid?</p>
+    <p>If yes, only B1 lets them find it. If no, the choice comes down to the smaller trade-offs above: fewer reads and no copied announcements in B1, against an on-chain check of E and one signature in A.</p>
+  </section>
+
+  <footer>Terms follow docs/design.md in scope-protocol/scope. k, the per-handshake index, is left out of both options since v1 uses one account per E. 2026-09-30.</footer>
+</div>
+</body>
+</html>
