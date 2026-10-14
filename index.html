@@ -2,18 +2,275 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SCOPE design notes</title>
-<style>body{margin:0;padding:48px 20px;font:16px/1.6 system-ui,sans-serif;background:#f4f6f9;color:#142030}main{max-width:680px;margin:0 auto}a{color:#1f6aa8}@media (prefers-color-scheme:dark){body{background:#0e141c;color:#e2e8f0}a{color:#6fb2ec}}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCOPE: private payroll on Solana</title>
+<meta name="description" content="Pay many people on Solana with encrypted amounts and a fresh account per payment that names no one. No pool, no relayer, an ordinary Token-2022 token.">
+<meta property="og:title" content="SCOPE: private payroll on Solana">
+<meta property="og:description" content="Encrypted amounts, a fresh account per payment, a visible payer. Live on devnet.">
+<meta property="og:image" content="https://scope-protocol.github.io/demo/poster.jpg">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+.hero { position: relative; overflow: hidden; padding-block: 96px 104px; }
+.hero svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .12; pointer-events: none; }
+.hero .wrap { position: relative; display: grid; grid-template-columns: 1.15fr .85fr; gap: 56px; align-items: center; }
+.hero h1 { font-size: clamp(42px, 5.6vw, 72px); }
+.hero .lead { margin-top: 26px; }
+.status { margin-top: 26px; font-size: 15px; color: var(--muted); }
+.status a { color: var(--muted); }
+.poster { position: relative; display: block; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 40px 80px -30px rgba(0,0,0,.7); }
+.poster img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.poster .play { position: absolute; left: 22px; bottom: 20px; display: flex; align-items: center; gap: 12px; font-weight: 700; color: var(--paper); text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.poster .play i { width: 46px; height: 46px; border-radius: 50%; background: var(--paper); position: relative; flex: none; }
+.poster .play i::after { content: ""; position: absolute; left: 18px; top: 14px; border-left: 15px solid var(--paper-ink); border-top: 9px solid transparent; border-bottom: 9px solid transparent; }
+@media (max-width: 880px) { .hero .wrap { grid-template-columns: 1fr; } }
+
+.shot { margin-top: 28px; }
+.shot h3 { margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.shot h3 small { font: 400 15px var(--sans); color: var(--muted); }
+.shot .frame { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.shot .frame img { display: block; width: 100%; }
+@media (max-width: 760px) { .shot .frame { min-width: 720px; } .poster .play { font-size: 14px; left: 14px; bottom: 12px; } .poster .play i { width: 36px; height: 36px; } .poster .play i::after { left: 14px; top: 10px; border-left-width: 12px; border-top-width: 8px; border-bottom-width: 8px; } }
+.hl { position: absolute; border: 3px solid var(--expose); border-radius: 8px; }
+.hl.enc { border-color: var(--foil); }
+.notes { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.lens { display: grid; grid-template-columns: 1fr; gap: 22px; margin-top: 36px; }
+.payment { background: var(--paper); color: var(--paper-ink); border-radius: 14px; padding: 26px 28px; box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); }
+.payment .head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 15px; color: #4f6d70; margin-bottom: 8px; }
+.payment .head a { color: #4f6d70; }
+.field { display: grid; grid-template-columns: 210px 1fr; gap: 16px; padding: 16px 0; border-top: 1px solid #c8d2ca; align-items: baseline; }
+.field .k { font-weight: 700; }
+.field .v { font-size: 19px; transition: opacity .25s; }
+.field .v .why { display: block; font-size: 15px; color: #567174; margin-top: 3px; }
+.v.open b { color: #0f6a45; }
+.v.shut b { color: #4d3bb8; font-family: var(--mono); font-weight: 600; font-size: 16px; word-break: break-all; }
+.v.na b { color: #7a8c8b; font-weight: 600; }
+.lens-note { color: #c2d1cc; font-size: 17px; max-width: 70ch; }
+@media (max-width: 640px) { .field { grid-template-columns: 1fr; gap: 4px; } }
+
+ol.steps { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: s; }
+ol.steps li { counter-increment: s; background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; }
+ol.steps li::before { content: counter(s); font: 800 15px var(--sans); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--paper); margin-bottom: 14px; }
+ol.steps h3 { margin-bottom: 8px; }
+ol.steps p { font-size: 16px; color: #c2d1cc; margin: 0 0 14px; }
+ol.steps code { display: block; margin-top: auto; background: #0a1a1d; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #cfe0dc; white-space: pre-wrap; }
+ol.steps .t { font-size: 14px; color: var(--gold); margin-top: 10px; }
+@media (max-width: 980px) { ol.steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { ol.steps { grid-template-columns: 1fr; } }
+
+ul.limits { list-style: none; padding: 0; margin: 32px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 40px; }
+ul.limits li { padding: 18px 0; border-bottom: 1px solid var(--line); font-size: 17px; color: #c2d1cc; }
+ul.limits li b { color: var(--text); display: block; margin-bottom: 4px; font-size: 18px; }
+</style>
 </head>
 <body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./">SCOPE</a>
+    <nav>
+      <a href="./" aria-current="page">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="demo/">Demo</a>
+      <a href="pitchdeck/SCOPE-Turbin3-Pitchdeck-v2.pdf">Pitchdeck</a>
+      <a class="wide" href="https://github.com/scope-protocol/scope">Code</a>
+    </nav>
+  </div>
+</header>
+
 <main>
-<h1>SCOPE design notes</h1>
-<ul>
-<li><a href="demo/">Demo</a> Two minutes on devnet: a payer pays two people, one through a fresh account; he collects and proves one payment to an auditor.</li>
-<li><a href="payer-base-or-shared-key.html">Who creates the one-time account?</a> Payer as base (A) or a key from the shared secret (B1).</li>
-<li><a href="architecture.html">Architecture</a> The design in six views, from the payroll story down to the crates.</li>
-</ul>
+<section class="hero">
+  <svg class="bg" id="guilloche" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+  <div class="wrap">
+    <div>
+      <h1>Payroll on Solana, without publishing salaries.</h1>
+      <p class="lead">SCOPE pays many people from one visible payer with encrypted amounts. A recipient who wants it gets a fresh account for every payment, set up by the payer alone, so nothing on chain names them. No pool, no relayer: the money stays an ordinary Token-2022 token.</p>
+      <div class="actions">
+        <a class="btn primary" href="demo/">Watch the 2-minute demo</a>
+        <a class="btn" href="architecture.html">How it works</a>
+        <a class="btn" href="pitchdeck/SCOPE-Turbin3-Pitchdeck-v2.pdf">Pitchdeck</a>
+        <a class="btn" href="https://github.com/scope-protocol/scope">Code on GitHub</a>
+      </div>
+      <p class="status">Live on Solana devnet: program <a href="https://explorer.solana.com/address/SCoPEvf7cwXjgzEQqqrJXN4gwU6TT81v1LC8vCZE5hT?cluster=devnet"><code>SCoPEvf7…E5hT</code></a></p>
+    </div>
+    <a class="poster" href="demo/" aria-label="Watch the demo video">
+      <img src="demo/poster.jpg" alt="Title frame of the SCOPE demo video" width="1280" height="720">
+      <span class="play"><i></i>Two minutes, real devnet transactions</span>
+    </a>
+  </div>
+</section>
+
+<section class="block" id="problem">
+  <div class="wrap">
+    <h2>Why not just pay on chain?</h2>
+    <p class="lead">Because every payment is a public record. Here is the same token, paid two ways on devnet, as anyone sees it in Solana Explorer.</p>
+    <div class="shot">
+      <h3>An ordinary transfer <small>who got paid, and exactly how much</small></h3>
+      <div class="scroll"><div class="frame">
+        <img src="assets/img/public-row.webp" alt="Explorer token row: owner GPRd…um2 received +1250.5 tokens" width="1904" height="180">
+        <span class="hl" style="left:11.6%;top:9%;width:40.8%;height:28%"></span>
+        <span class="hl" style="left:88%;top:7%;width:11.4%;height:52%"></span>
+      </div>
+      </div><div class="notes"><span class="chip c-pub">recipient visible</span><span class="chip c-pub">+1250.5 visible</span></div>
+    </div>
+    <div class="shot">
+      <h3>A SCOPE payment of 800 <small>a fresh owner, and nothing to read</small></h3>
+      <div class="scroll"><div class="frame">
+        <img src="assets/img/bob-row.webp" alt="Explorer token row: owner 3vwK…4YX, +0, 0 tokens" width="1904" height="180">
+        <span class="hl enc" style="left:11.6%;top:9%;width:40.8%;height:28%"></span>
+        <span class="hl enc" style="left:91.6%;top:7%;width:7.8%;height:52%"></span>
+      </div>
+      </div><div class="notes"><span class="chip c-enc">a key nobody has seen before</span><span class="chip c-enc">0 tokens visible</span></div>
+    </div>
+    <p class="caption">Transactions <a href="https://explorer.solana.com/tx/2yyie5d4QZ94tTACfnY13VmgAJRi3oFReCNoMTXgcmgZsG1ckd3EUqWK3BkDZ4QAeY3xx2hXLeTbZVcafESiJwZP?cluster=devnet">2yyie5d4</a> and <a href="https://explorer.solana.com/tx/5XphEUrtpNUAbrEubbu7mXLWXNxYpWjFNoMAq3YvxiF9xmq5xCvG5w4iaksE3wTgCpwJmmwjcy935TihLPmkCUBD?cluster=devnet">5XphEUrt</a>, 13 October 2026.</p>
+    <div class="cols">
+      <div class="card"><h3>Token-2022 confidential transfers</h3><p>Hide the amount, but the recipient's account is fixed. "Acme pays Alice every month" stays public.</p></div>
+      <div class="card"><h3>Stealth addresses</h3><p>Give each payment a fresh address, but the amount is public, and the recipient would have to set up every encrypted account themselves.</p></div>
+      <div class="card"><h3>SCOPE joins them</h3><p>The payer creates and encrypts the recipient's one-time account alone, in the same transaction that pays it. The recipient only has to share one address, once.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="who-sees-what">
+  <div class="wrap">
+    <h2>Who can see what?</h2>
+    <p class="lead">One real payment, Acme paying Bob 800 dUSD. Pick who is looking.</p>
+    <div class="lens">
+      <div class="tabs" role="tablist" aria-label="Viewer" id="viewers"></div>
+      <div class="payment" role="tabpanel" id="lens-panel" aria-live="polite">
+        <div class="head"><span>Payment <a href="https://explorer.solana.com/tx/5XphEUrtpNUAbrEubbu7mXLWXNxYpWjFNoMAq3YvxiF9xmq5xCvG5w4iaksE3wTgCpwJmmwjcy935TihLPmkCUBD?cluster=devnet">5XphEUrt…CUBD</a></span><span>Solana devnet</span></div>
+        <div class="field"><span class="k">Who paid</span><span class="v" id="f-payer"></span></div>
+        <div class="field"><span class="k">How much</span><span class="v" id="f-amount"></span></div>
+        <div class="field"><span class="k">Who was paid</span><span class="v" id="f-to"></span></div>
+        <div class="field"><span class="k">Bob's other payments</span><span class="v" id="f-other"></span></div>
+      </div>
+      <p class="lens-note" id="lens-note"></p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="how">
+  <div class="wrap">
+    <h2>How does a payment work?</h2>
+    <p class="lead">Four steps, one transaction on each side. These commands and timings are from the devnet run in the demo.</p>
+    <ol class="steps">
+      <li><h3>Register</h3><p>Bob creates his keys once and gives Acme one address. Off chain, no SOL needed.</p><code>scope register</code><span class="t">once</span></li>
+      <li><h3>Pay</h3><p>One transaction per person creates Bob's one-time account, encrypts it to keys only the two parties can derive, hands it to Bob's one-time key and pays in.</p><code>scope pay --input payroll.csv</code><span class="t">2 people in 6 s</span></li>
+      <li><h3>Collect</h3><p>Bob's scanner finds his payment with a one-byte hint, then moves it to a fresh account. Acme prepaid the fee, so Bob needs no SOL.</p><code>scope scan
+scope sweep --announcement …</code><span class="t">1 s to scan, 7 s to collect</span></li>
+      <li><h3>Prove</h3><p>A receipt opens one payment for an auditor, who checks it against the chain without trusting whoever handed it over.</p><code>scope disclose …
+scope verify receipt.json</code><span class="t">about 1 s each</span></li>
+    </ol>
+    <div class="actions"><a class="btn" href="architecture.html">Read the architecture walkthrough</a></div>
+  </div>
+</section>
+
+<section class="block" id="numbers">
+  <div class="wrap">
+    <h2>What does it cost?</h2>
+    <p class="lead">Measured on devnet for one stealth payment, the kind that hides the recipient.</p>
+    <div class="fig scroll" style="padding:8px 28px 12px">
+      <table class="spec">
+        <thead><tr><th>Measure</th><th>Value</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>Payment transaction</td><td class="num">3,006 bytes</td><td>of the 4,096 a v1 transaction allows; every proof rides inline</td></tr>
+          <tr><td>Compute</td><td class="num">257,432 CU</td><td>payment; the recipient's collect used 276,941</td></tr>
+          <tr><td>SOL the payer fronts</td><td class="num">0.0086 SOL</td><td>8,630,800 lamports; 4,008,120 of it is rent that comes back when Bob collects</td></tr>
+          <tr><td>SOL the recipient needs</td><td class="num">0</td><td>the payer funds the collect transaction</td></tr>
+          <tr><td>Plain payment</td><td class="num">2,403 bytes</td><td>to a recipient with a known confidential account; fee only</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="limits">
+  <div class="wrap">
+    <h2>What does it not do?</h2>
+    <p class="lead">SCOPE hides amounts and recipients from the public. It is not anonymity, and it is not a mixer.</p>
+    <ul class="limits">
+      <li><b>The payer is visible</b>On purpose: it keeps the rail outside mixer territory and makes every payment provable.</li>
+      <li><b>The payer knows where it paid</b>Acme chose Bob and the amount. SCOPE hides that from everyone else, not from Acme.</li>
+      <li><b>Timing and headcount show</b>Payments in one run land close together from one payer, so their number is visible.</li>
+      <li><b>The issuer can hold an auditor key</b>If the mint has one, its holder can decrypt every amount on that mint.</li>
+      <li><b>No major stablecoin fits yet</b>Stealth payments need a mint that approves confidential accounts itself, with no transfer fee or hook.</li>
+      <li><b>Privacy ends where the recipient acts</b>The first public withdrawal, or a spend to someone who knows Bob, ties his fresh account to him.</li>
+      <li><b>Collect destinations are recognisable</b>Bob's fresh account is created with a fixed seed, so it marks its owner as a SCOPE recipient.</li>
+      <li><b>No external review yet</b>The key derivations have had no external cryptographic review.</li>
+    </ul>
+    <p class="caption">Every limit, with its evidence: <a href="https://github.com/scope-protocol/scope/blob/main/docs/privacy.md">privacy.md</a> and <a href="https://github.com/scope-protocol/scope/blob/main/docs/overview.md">overview.md</a>.</p>
+  </div>
+</section>
 </main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>SCOPE. One Pinocchio program and one Rust CLI. MIT or Apache-2.0.</span>
+    <span><a href="architecture.html">Architecture</a> &nbsp; <a href="demo/">Demo</a> &nbsp; <a href="https://github.com/scope-protocol/scope">GitHub</a> &nbsp; <a href="https://github.com/scope-protocol/scope/tree/main/docs">Docs</a></span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // Security-print backdrop: layered hypotrochoids
+  const svg = document.getElementById('guilloche');
+  const curve = (cx, cy, R, r, d, turns, col, w) => {
+    let p = '';
+    for (let i = 0; i <= 2400; i++) {
+      const t = i / 2400 * Math.PI * 2 * turns;
+      const x = cx + (R - r) * Math.cos(t) + d * Math.cos((R - r) / r * t);
+      const y = cy + (R - r) * Math.sin(t) - d * Math.sin((R - r) / r * t);
+      p += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    return `<path d="${p}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+  };
+  svg.innerHTML = curve(1300, 640, 420, 147, 260, 21, '#9fd8cc', 1) + curve(1300, 640, 300, 93, 160, 31, '#b9a8ff', .8);
+
+  const O = (b, why) => ({ c: 'open', b, why }), S = (b, why) => ({ c: 'shut', b, why }), N = (b, why) => ({ c: 'na', b, why });
+  const views = [
+    { id: 'public', label: 'The public',
+      f: [O('Acme, 7oJR…fKtW', 'it signs and pays the fee'), S('62c7c60d 843475a5 669760bb 7a8323f3…', 'the 800, as stored on chain'), S('3vwK…4YX', 'a one-time key, tied to no one'), S('unlinkable', 'each lands in its own fresh account, until Bob merges or spends them where he is known')],
+      note: 'Anyone can see that Acme paid something. Not how much, and not to whom.' },
+    { id: 'program', label: 'The SCOPE program',
+      f: [O('Acme', 'stored so the rent can only go back to it'), N('never sees it', 'it is never in the funds path'), N('only the one-time account', 'it stores R, a 1-byte hint and the payer; not who is behind it'), N('nothing', '68 bytes per payment, nothing else')],
+      note: 'The program writes a 68-byte notice and checks the one-time account is set up right. Token-2022 moves the money.' },
+    { id: 'acme', label: 'Acme, the payer',
+      f: [O('Acme'), O('800 dUSD', 'it chose the amount'), O('Bob', 'it chose him, and sees where he collects'), S('hidden', 'Acme cannot see what anyone else pays Bob')],
+      note: 'SCOPE hides the recipient from the public, not from the payer. Acme still cannot move the money once it is paid.' },
+    { id: 'bob', label: 'Bob',
+      f: [O('Acme'), O('800 dUSD', 'decrypted on his laptop'), O('himself', 'his scanner recognised the payment'), O('his own')],
+      note: 'Bob finds the payment with his scan key and is the only one who can spend it.' },
+    { id: 'auditor', label: 'An auditor with Bob’s receipt',
+      f: [O('Acme'), O('800 dUSD', 'checked against the chain'), O('Bob', 'he presented the receipt'), S('hidden', 'the receipt opens this one account only')],
+      note: 'A receipt is selective disclosure: one payment, verified on chain, nothing about Bob’s other income.' },
+    { id: 'issuer', label: 'The issuer’s auditor key',
+      f: [O('Acme'), O('800 dUSD', 'and every other amount on the mint'), S('3vwK…4YX', 'amounts, not identities'), S('unlinkable', 'same as the public')],
+      note: 'Only if the mint was created with an auditor key. That is a property of the token, not of SCOPE.' },
+  ];
+  const tabs = document.getElementById('viewers');
+  const ids = ['f-payer', 'f-amount', 'f-to', 'f-other'];
+  const show = v => {
+    [...tabs.children].forEach(b => b.setAttribute('aria-selected', String(b.dataset.id === v.id)));
+    v.f.forEach((x, i) => {
+      const el = document.getElementById(ids[i]);
+      el.className = 'v ' + x.c;
+      el.innerHTML = '<b>' + x.b + '</b>' + (x.why ? '<span class="why">' + x.why + '</span>' : '');
+    });
+    document.getElementById('lens-note').textContent = v.note;
+  };
+  views.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.role = 'tab'; b.dataset.id = v.id; b.textContent = v.label;
+    b.addEventListener('click', () => show(v));
+    b.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      const n = views[(i + d + views.length) % views.length];
+      show(n); tabs.children[(i + d + views.length) % views.length].focus();
+    });
+    tabs.appendChild(b);
+  });
+  show(views[0]);
+})();
+</script>
 </body>
 </html>

@@ -2,32 +2,74 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SCOPE demo</title>
+<meta name="description" content="Private payroll on Solana, run on devnet in two minutes.">
 <meta property="og:title" content="SCOPE demo">
 <meta property="og:description" content="Private payroll on Solana, run on devnet in two minutes.">
 <meta property="og:image" content="https://scope-protocol.github.io/demo/poster.jpg">
 <meta property="og:video" content="https://scope-protocol.github.io/demo/scope-demo.mp4">
-<style>body{margin:0;padding:48px 20px;font:16px/1.6 system-ui,sans-serif;background:#f4f6f9;color:#142030}main{max-width:960px;margin:0 auto}a{color:#1f6aa8}video{display:block;width:100%;height:auto;border-radius:8px;background:#0f2428;margin:24px 0}table{border-collapse:collapse;width:100%;font-size:14px}td{padding:6px 10px 6px 0;border-bottom:1px solid #d5dbe3;vertical-align:top}td:first-child{white-space:nowrap}code{font:13px ui-monospace,monospace;word-break:break-all}.wrap{overflow-x:auto}@media (prefers-color-scheme:dark){body{background:#0e141c;color:#e2e8f0}a{color:#6fb2ec}td{border-color:#273242}}</style>
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+.intro { padding-block: 72px 24px; }
+.intro h1 { font-size: clamp(38px, 5vw, 60px); }
+.intro .lead { margin-top: 20px; }
+video { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #0f2428; margin-top: 28px; box-shadow: 0 40px 80px -30px rgba(0,0,0,.7); }
+table.spec td a { text-decoration: none; }
+table.spec td code { word-break: break-all; }
+</style>
 </head>
 <body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../">SCOPE</a>
+    <nav>
+      <a href="../">Home</a>
+      <a href="../architecture.html">Architecture</a>
+      <a href="./" aria-current="page">Demo</a>
+      <a href="../pitchdeck/SCOPE-Turbin3-Pitchdeck-v2.pdf">Pitchdeck</a>
+      <a class="wide" href="https://github.com/scope-protocol/scope">Code</a>
+    </nav>
+  </div>
+</header>
+
 <main>
-<p><a href="../">SCOPE design notes</a></p>
-<h1>SCOPE demo</h1>
-<p>A payer pays two people on Solana devnet. The amounts are encrypted, and one recipient gets a fresh account that the public cannot tie to him. He collects the money without holding SOL, then proves that one payment to an auditor. Two minutes, captioned.</p>
-<video controls preload="metadata" playsinline poster="poster.jpg">
-<source src="scope-demo.mp4" type="video/mp4">
-<a href="scope-demo.mp4">Download the video</a>
-</video>
-<p>Every transaction in the video ran on devnet on 13 October 2026. On-chain waits are shortened. Check them yourself:</p>
-<div class="wrap"><table>
-<tr><td>Program</td><td><a href="https://explorer.solana.com/address/SCoPEvf7cwXjgzEQqqrJXN4gwU6TT81v1LC8vCZE5hT?cluster=devnet"><code>SCoPEvf7cwXjgzEQqqrJXN4gwU6TT81v1LC8vCZE5hT</code></a></td></tr>
-<tr><td>Public transfer, for contrast</td><td><a href="https://explorer.solana.com/tx/2yyie5d4QZ94tTACfnY13VmgAJRi3oFReCNoMTXgcmgZsG1ckd3EUqWK3BkDZ4QAeY3xx2hXLeTbZVcafESiJwZP?cluster=devnet"><code>2yyie5d4…JwZP</code></a></td></tr>
-<tr><td>Payment to Bob</td><td><a href="https://explorer.solana.com/tx/5XphEUrtpNUAbrEubbu7mXLWXNxYpWjFNoMAq3YvxiF9xmq5xCvG5w4iaksE3wTgCpwJmmwjcy935TihLPmkCUBD?cluster=devnet"><code>5XphEUrt…CUBD</code></a></td></tr>
-<tr><td>Payment to Alice</td><td><a href="https://explorer.solana.com/tx/xqqLD7YMzUiFfHGDbBiaeuBbUDt8Dix83hecD4WRRFE7UQChPMKyMQK5rg28zGdQTaKgccvi2CyMEfe5KnY4ZeW?cluster=devnet"><code>xqqLD7YM…4ZeW</code></a></td></tr>
-<tr><td>Bob collects</td><td><a href="https://explorer.solana.com/tx/2XtLVsMYSC6ikrZ8dYW9SMYae3ZXBSDAK8tvHXki2iaR6qB8YxpphaBZuxpczG3J3GNJczdPVTQyg9LtFne9GSKz?cluster=devnet"><code>2XtLVsMY…9GSKz</code></a></td></tr>
-</table></div>
-<p>The payer stays visible by design; SCOPE hides amounts and who received them. Limits and trust assumptions: <a href="https://github.com/scope-protocol/scope/blob/main/docs/privacy.md">privacy.md</a>. Code: <a href="https://github.com/scope-protocol/scope">github.com/scope-protocol/scope</a>.</p>
+<div class="intro">
+  <div class="wrap">
+    <h1>SCOPE in two minutes</h1>
+    <p class="lead">Acme pays two people on Solana devnet. The amounts are encrypted, and Bob gets a fresh account that names no one. He collects the money without holding SOL, then proves that one payment to an auditor.</p>
+    <video controls preload="metadata" playsinline poster="poster.jpg">
+      <source src="scope-demo.mp4" type="video/mp4">
+      <a href="scope-demo.mp4">Download the video</a>
+    </video>
+  </div>
+</div>
+
+<section class="block" style="border-top:0;padding-top:48px">
+  <div class="wrap">
+    <h2>Check it yourself</h2>
+    <p class="lead">Every transaction in the video ran on devnet on 13 October 2026; only the waits are shortened.</p>
+    <div class="fig scroll" style="padding:8px 28px 12px">
+      <table class="spec">
+        <tbody>
+          <tr><td>Program</td><td><a href="https://explorer.solana.com/address/SCoPEvf7cwXjgzEQqqrJXN4gwU6TT81v1LC8vCZE5hT?cluster=devnet"><code>SCoPEvf7cwXjgzEQqqrJXN4gwU6TT81v1LC8vCZE5hT</code></a></td></tr>
+          <tr><td>A public transfer, for contrast</td><td><a href="https://explorer.solana.com/tx/2yyie5d4QZ94tTACfnY13VmgAJRi3oFReCNoMTXgcmgZsG1ckd3EUqWK3BkDZ4QAeY3xx2hXLeTbZVcafESiJwZP?cluster=devnet"><code>2yyie5d4…JwZP</code></a></td></tr>
+          <tr><td>Acme pays Bob</td><td><a href="https://explorer.solana.com/tx/5XphEUrtpNUAbrEubbu7mXLWXNxYpWjFNoMAq3YvxiF9xmq5xCvG5w4iaksE3wTgCpwJmmwjcy935TihLPmkCUBD?cluster=devnet"><code>5XphEUrt…CUBD</code></a></td></tr>
+          <tr><td>Acme pays Alice</td><td><a href="https://explorer.solana.com/tx/xqqLD7YMzUiFfHGDbBiaeuBbUDt8Dix83hecD4WRRFE7UQChPMKyMQK5rg28zGdQTaKgccvi2CyMEfe5KnY4ZeW?cluster=devnet"><code>xqqLD7YM…4ZeW</code></a></td></tr>
+          <tr><td>Bob collects</td><td><a href="https://explorer.solana.com/tx/2XtLVsMYSC6ikrZ8dYW9SMYae3ZXBSDAK8tvHXki2iaR6qB8YxpphaBZuxpczG3J3GNJczdPVTQyg9LtFne9GSKz?cluster=devnet"><code>2XtLVsMY…GSKz</code></a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="actions"><a class="btn primary" href="../architecture.html">See how it works</a><a class="btn" href="https://github.com/scope-protocol/scope/blob/main/docs/privacy.md">What it does not hide</a></div>
+  </div>
+</section>
 </main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>The payer stays visible by design; SCOPE hides amounts and who received them.</span>
+    <span><a href="../">Home</a> &nbsp; <a href="../architecture.html">Architecture</a> &nbsp; <a href="https://github.com/scope-protocol/scope">GitHub</a></span>
+  </div>
+</footer>
 </body>
 </html>
